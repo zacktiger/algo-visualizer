@@ -179,12 +179,19 @@ export default function App() {
       {/* ═══════════════ HEADER ═══════════════ */}
       <header className="flex items-center justify-between px-4 md:px-6 h-12 border-b border-slate-800">
         <div className="flex items-center gap-4">
-          <h1
-            className="text-base font-bold tracking-tight"
-            style={{ textShadow: '0 0 12px #3B82F6' }}
-          >
-            <span className="text-blue-400">⚡</span> AlgoViz
-          </h1>
+          <div className="flex items-center gap-3">
+            <img
+              src="/signal.jpg"
+              alt="AlgoViz logo"
+              className="h-8 w-8 rounded-md object-cover ring-1 ring-slate-700"
+            />
+            <h1
+              className="text-base font-bold tracking-tight"
+              style={{ textShadow: '0 0 12px #3B82F6' }}
+            >
+              AlgoViz
+            </h1>
+          </div>
           <AlgorithmPicker onSelect={handleAlgoSelect} selected={algorithm} />
         </div>
         <div className="flex items-center gap-2">
