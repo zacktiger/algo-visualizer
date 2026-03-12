@@ -1,73 +1,130 @@
-# React + TypeScript + Vite
+# AlgoViz
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interactive algorithm visualizer built with React, TypeScript, Vite, Tailwind CSS, Framer Motion, and Zustand. It lets you run classic array, graph, and dynamic programming algorithms step by step, inspect pseudocode line highlights, and compare two algorithms on the same input.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Step-by-step playback for algorithm execution
+- Timeline controls for play, pause, seek, speed changes, and manual stepping
+- Live stats for comparisons, swaps, and memory operations
+- Code panel with highlighted lines for the current step
+- State panel with step descriptions and payload details
+- Compare mode to run two algorithms side by side on identical input
+- Input editors for arrays, graphs, and DP-specific parameters
+- Dedicated renderers for arrays, graphs, and DP tables
 
-## React Compiler
+## Supported Algorithms
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Arrays
 
-## Expanding the ESLint configuration
+- Bubble Sort
+- Quick Sort
+- Merge Sort
+- Binary Search
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Graphs
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Breadth-First Search (BFS)
+- Depth-First Search (DFS)
+- Dijkstra's Algorithm
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Dynamic Programming
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Longest Common Subsequence (LCS)
+- 0/1 Knapsack
+- Longest Increasing Subsequence (LIS)
+
+## Tech Stack
+
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS v4
+- Framer Motion
+- Zustand
+
+## Project Structure
+
+```text
+src/
+  algorithms/     Algorithm generators and metadata
+  components/     UI controls, panels, timeline, compare mode
+  engine/         Playback engine and global store
+  renderers/      Array, graph, and DP renderers
+  utils/          Algorithm execution helpers
+  constants/      Shared colors and UI constants
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Getting Started
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Prerequisites
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Node.js 18+ recommended
+- npm
+
+### Installation
+
+```bash
+npm install
 ```
+
+### Run in Development
+
+```bash
+npm run dev
+```
+
+Open the local Vite URL shown in the terminal, usually `http://localhost:5173`.
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+### Preview Production Build
+
+```bash
+npm run preview
+```
+
+## How It Works
+
+Each algorithm is implemented as a generator that emits a sequence of discrete `Step` objects. A step contains:
+
+- the operation type, such as `COMPARE`, `SWAP`, `VISIT`, or `SET_CELL`
+- payload data used by the renderer
+- source-code line numbers to highlight
+- a human-readable description for the UI
+
+The app runs the selected algorithm once, stores all emitted steps, and replays them through a small playback engine. This makes scrubbing, comparing runs, and recalculating stats straightforward.
+
+## Input Modes
+
+- Array algorithms accept comma-separated numeric input and support randomized arrays.
+- Graph algorithms use an interactive SVG canvas where you can add nodes, connect edges, and assign weights.
+- DP algorithms use custom forms based on the selected problem, such as two strings for LCS or `weight:value` pairs for Knapsack.
+
+## Why This Project
+
+This project is designed for learning, demos, and interview prep. Instead of only showing a final answer, it exposes the sequence of decisions an algorithm makes and how those decisions affect the data structure over time.
+
+## Scripts
+
+```bash
+npm run dev
+npm run build
+npm run lint
+npm run preview
+```
+
+## Future Improvements
+
+- More graph algorithms such as Prim's, Kruskal's, and topological sort
+- More advanced DP problems and path reconstruction views
+- Preset datasets and shareable URLs
+- Test coverage for generators and renderer edge cases
+
+## License
+
+Add a license before publishing publicly on GitHub. MIT is a common default if you want permissive reuse.
