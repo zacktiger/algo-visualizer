@@ -1,11 +1,12 @@
 /**
  * Stats bar — displays running comparisons, swaps, mem-ops,
- * and algorithm complexity.
+ * and algorithm complexity in a slim, polished strip.
  *
  * @module components/StatsBar
  */
 
 import { useEffect, useRef, useState } from "react";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import type { AlgorithmMeta } from "../algorithms/types";
 
 /** Props accepted by {@link StatsBar}. */
@@ -17,10 +18,12 @@ export interface StatsBarProps {
 }
 
 /**
- * Animated counter that smoothly counts up from old → new value.
+ * Animated counter that smoothly counts up from old → new value
+ * with a quick scale-up pulse on change.
  */
-function AnimatedNumber({ value }: { value: number }) {
+function AnimatedStat({ label, value }: { label: string; value: number }) {
   const [display, setDisplay] = useState(value);
+  const [pulse, setPulse] = useState(false);
   const prev = useRef(value);
 
   useEffect(() => {
@@ -28,6 +31,9 @@ function AnimatedNumber({ value }: { value: number }) {
     const to = value;
     prev.current = to;
     if (from === to) return;
+
+    setPulse(true);
+    const timeout = setTimeout(() => setPulse(false), 250);
 
     const duration = 300;
     const start = performance.now();
@@ -40,41 +46,51 @@ function AnimatedNumber({ value }: { value: number }) {
     };
     raf = requestAnimationFrame(tick);
 
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timeout);
+    };
   }, [value]);
 
-  return <span>{display}</span>;
-}
-
-/** Single stat chip. */
-function Chip({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex items-center gap-1.5 text-xs font-mono">
-      <span className="text-slate-500">{label}:</span>
-      <span className="text-slate-200">
-        <AnimatedNumber value={value} />
-      </span>
+    <div className="flex items-center gap-1.5">
+      <span className="text-slate-500 text-xs">{label}</span>
+      <motion.span
+        className="text-white font-mono font-bold text-xs"
+        animate={{ scale: pulse ? 1.25 : 1 }}
+        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+      >
+        {display}
+      </motion.span>
     </div>
   );
 }
 
 export function StatsBar({ comparisons, swaps, memOps, meta }: StatsBarProps) {
   return (
-    <div
-      className="flex items-center justify-between px-4 py-2 rounded-lg"
-      style={{ backgroundColor: "#1E293B" }}
-    >
-      <div className="flex gap-4">
-        <Chip label="Comparisons" value={comparisons} />
-        <Chip label="Swaps" value={swaps} />
-        <Chip label="Mem Ops" value={memOps} />
+    <div className="flex items-center justify-between h-9 px-4 rounded-lg bg-slate-900/90 backdrop-blur border-t border-slate-800">
+      {/* ── Stats (left) ── */}
+      <div className="flex items-center gap-0">
+        <div className="pr-4">
+          <AnimatedStat label="Comparisons" value={comparisons} />
+        </div>
+        <div className="border-r border-slate-700 h-4" />
+        <div className="px-4">
+          <AnimatedStat label="Swaps" value={swaps} />
+        </div>
+        <div className="border-r border-slate-700 h-4" />
+        <div className="pl-4">
+          <AnimatedStat label="Mem Ops" value={memOps} />
+        </div>
       </div>
-      <div className="flex gap-4 text-xs font-mono">
+
+      {/* ── Complexity (right) ── */}
+      <div className="flex items-center gap-4 text-xs font-mono">
         <span className="text-slate-500">
-          Time: <span className="text-emerald-400">{meta.timeComplexity}</span>
+          Time: <span className="text-green-400">{meta.timeComplexity}</span>
         </span>
         <span className="text-slate-500">
-          Space: <span className="text-sky-400">{meta.spaceComplexity}</span>
+          Space: <span className="text-blue-400">{meta.spaceComplexity}</span>
         </span>
       </div>
     </div>

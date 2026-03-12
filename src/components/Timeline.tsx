@@ -1,5 +1,5 @@
 /**
- * Playback timeline — frame-based scrubber with step-type coloured markers,
+ * Playback timeline — frame-based scrubber with step-type coloured dot markers,
  * transport buttons, speed selector, and keyboard shortcuts.
  *
  * @module components/Timeline
@@ -85,22 +85,18 @@ export function Timeline({
       className="rounded-xl p-4 flex flex-col gap-3"
       style={{ backgroundColor: "#1E293B" }}
     >
-      {/* ── Step-type markers track ── */}
-      <div className="relative w-full h-8">
+      {/* ── Scrubber track ── */}
+      <div className="relative w-full h-8 flex items-center">
         {/* Background track */}
-        <div
-          className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-[6px] rounded-full"
-          style={{ backgroundColor: "#0F172A" }}
-        />
+        <div className="absolute left-0 right-0 h-1.5 rounded-full bg-slate-700/50" />
 
-        {/* Filled track */}
+        {/* Progress fill */}
         <motion.div
-          className="absolute top-1/2 -translate-y-1/2 left-0 h-[6px] rounded-full"
+          className="absolute left-0 h-1.5 rounded-full"
           animate={{ width: `${progressPct}%` }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
           style={{
             background: "linear-gradient(90deg, #3B82F6, #60A5FA)",
-            boxShadow: "0 0 8px rgba(59,130,246,0.4)",
           }}
         />
 
@@ -108,7 +104,6 @@ export function Timeline({
         {steps && totalSteps > 0 && (
           <div className="absolute inset-0">
             {steps.map((s, i) => {
-              // Only render markers for key step types and limit density
               const skip = totalSteps > 100 ? Math.max(1, Math.floor(totalSteps / 80)) : 1;
               if (i % skip !== 0 && i !== currentStep) return null;
 
@@ -119,22 +114,17 @@ export function Timeline({
               const isCurrentMarker = i === currentStep;
 
               return (
-                <motion.div
+                <div
                   key={i}
-                  className="absolute top-1/2 -translate-y-1/2 rounded-full cursor-pointer"
+                  className="absolute top-1/2 rounded-full cursor-pointer"
                   style={{
                     left: `${leftPct}%`,
                     transform: "translate(-50%, -50%)",
+                    width: isCurrentMarker ? 4 : 4,
+                    height: isCurrentMarker ? 4 : 4,
                     backgroundColor: markerColor,
+                    opacity: isCurrentMarker ? 1 : 0.7,
                   }}
-                  animate={{
-                    width: isCurrentMarker ? 14 : 5,
-                    height: isCurrentMarker ? 14 : 5,
-                    boxShadow: isCurrentMarker
-                      ? `0 0 12px ${markerColor}, 0 0 24px ${markerColor}40`
-                      : "none",
-                  }}
-                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   onClick={() => onSeek(i)}
                   title={`Step ${i + 1}: ${s.type}`}
                 />
@@ -142,6 +132,17 @@ export function Timeline({
             })}
           </div>
         )}
+
+        {/* Thumb */}
+        <motion.div
+          className="absolute top-1/2 w-4 h-4 rounded-full bg-white z-10 pointer-events-none"
+          animate={{ left: `${progressPct}%` }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          style={{
+            transform: "translate(-50%, -50%)",
+            boxShadow: "0 2px 8px rgba(59,130,246,0.3), 0 0 0 2px rgba(59,130,246,0.15)",
+          }}
+        />
 
         {/* Range input overlay for dragging */}
         <input
@@ -151,19 +152,19 @@ export function Timeline({
           value={currentStep}
           onChange={(e) => onSeek(Number(e.target.value))}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          style={{ zIndex: 5 }}
+          style={{ zIndex: 15 }}
         />
       </div>
 
       {/* ── Step counter + type badge + description ── */}
-      <div className="flex items-center justify-between text-xs text-slate-400">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="code-mono">
+          <span className="font-mono text-xs text-slate-400">
             Step {currentStep + 1} / {totalSteps}
           </span>
           {currentStepType && (
             <motion.span
-              className="px-2 py-0.5 rounded-full text-[10px] font-semibold code-mono text-white"
+              className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
               animate={{ backgroundColor: stepColor }}
               transition={{ duration: 0.2 }}
             >
@@ -180,20 +181,21 @@ export function Timeline({
 
       {/* ── Transport buttons ── */}
       <div className="flex items-center justify-center gap-2">
-        <TransportBtn label="⏮" onClick={() => onSeek(0)} title="First step (Home)" />
-        <TransportBtn label="◀" onClick={onStepBack} title="Step back (←)" />
+        <TransportBtn label="⏮" onClick={() => onSeek(0)} title="First step (Home)" isPlaying={false} />
+        <TransportBtn label="◀" onClick={onStepBack} title="Step back (←)" isPlaying={false} />
 
         {isPlaying ? (
-          <TransportBtn label="⏸" onClick={onPause} title="Pause (Space)" primary />
+          <TransportBtn label="⏸" onClick={onPause} title="Pause (Space)" primary isPlaying={isPlaying} />
         ) : (
-          <TransportBtn label="▶" onClick={onPlay} title="Play (Space)" primary />
+          <TransportBtn label="▶" onClick={onPlay} title="Play (Space)" primary isPlaying={isPlaying} />
         )}
 
-        <TransportBtn label="▶" onClick={onStepForward} title="Step forward (→)" />
+        <TransportBtn label="▶" onClick={onStepForward} title="Step forward (→)" isPlaying={false} />
         <TransportBtn
           label="⏭"
           onClick={() => onSeek(totalSteps - 1)}
           title="Last step (End)"
+          isPlaying={false}
         />
       </div>
 
@@ -204,10 +206,10 @@ export function Timeline({
             key={s}
             onClick={() => onSpeedChange(s)}
             title={`${s}× speed`}
-            className={`px-2.5 py-1 rounded-lg text-xs code-mono transition-all duration-200 ${
+            className={`px-3 py-1 rounded-full text-xs font-mono transition-all duration-200 ${
               speed === s
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                : "bg-slate-700/60 text-slate-400 hover:bg-slate-600 hover:text-slate-200"
+                ? "bg-blue-600 text-white"
+                : "bg-slate-800 text-slate-400 hover:text-slate-200"
             }`}
           >
             {s}×
@@ -230,26 +232,32 @@ function TransportBtn({
   onClick,
   title,
   primary = false,
+  isPlaying = false,
 }: {
   label: string;
   onClick: () => void;
   title: string;
   primary?: boolean;
+  isPlaying?: boolean;
 }) {
   return (
     <motion.button
       onClick={onClick}
       title={title}
-      className={`w-9 h-9 flex items-center justify-center rounded-full text-sm transition-colors ${
+      className={`flex items-center justify-center rounded-full text-sm transition-colors ${
         primary
-          ? "bg-blue-600 text-white hover:bg-blue-500"
-          : "bg-slate-700/60 text-slate-300 hover:bg-slate-600"
+          ? "w-11 h-11 bg-blue-600 text-white hover:bg-blue-500"
+          : "w-9 h-9 bg-slate-800 border border-slate-600 text-slate-300 hover:bg-slate-700"
       }`}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
       style={
         primary
-          ? { boxShadow: "0 0 12px rgba(59,130,246,0.4)" }
+          ? {
+              boxShadow: isPlaying
+                ? "0 0 16px rgba(59,130,246,0.5), 0 0 32px rgba(59,130,246,0.2)"
+                : "0 0 12px rgba(59,130,246,0.4)",
+            }
           : undefined
       }
     >
