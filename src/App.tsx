@@ -4,7 +4,7 @@
  * @module App
  */
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { AlgorithmMeta, InputData, Step } from "./algorithms/types";
 import { AlgorithmCategory, StepType } from "./algorithms/types";
@@ -142,29 +142,35 @@ export default function App() {
   const currentStepData: Step | null = steps[currentStep] ?? null;
   const category: string = algorithm?.category ?? AlgorithmCategory.ARRAY;
 
-  /* ── Build current array state by replaying swaps ── */
-  const currentArrayValues = (() => {
+  /* ── Build current array state by replaying swaps (identity-tagged) ── */
+  // Each element keeps a stable `id` (its original index) so a SWAP slides
+  // the two bars past each other instead of morphing heights in place.
+  // Memoized so the O(steps) replay only reruns when inputs actually change.
+  const currentArrayValues = useMemo(() => {
     if (!inputData || inputData.kind !== "array") return [];
-    const arr = [...inputData.values];
+    const arr = inputData.values.map((value, i) => ({ id: i, value }));
     for (let i = 0; i <= Math.min(currentStep, steps.length - 1); i++) {
       const s = steps[i];
       if (s.type === StepType.SWAP) {
         const si = s.payload.i as number;
         const sj = s.payload.j as number;
-        [arr[si], arr[sj]] = [arr[sj], arr[si]];
+        if (typeof si === "number" && typeof sj === "number") {
+          [arr[si], arr[sj]] = [arr[sj], arr[si]];
+        }
       }
       if (s.type === StepType.SET_CELL && s.payload.index !== undefined) {
-        arr[s.payload.index as number] = s.payload.value as number;
+        const index = s.payload.index as number;
+        arr[index] = { ...arr[index], value: s.payload.value as number };
       }
     }
     return arr;
-  })();
+  }, [inputData, steps, currentStep]);
 
   /* ── Build DP table by replaying SET_CELL steps ── */
-  const dpTable = (() => {
+  const dpTable = useMemo(() => {
     if (!inputData || inputData.kind !== "dp" || steps.length === 0) return [];
     return buildDpTable(steps, currentStep);
-  })();
+  }, [inputData, steps, currentStep]);
 
   return (
     <div

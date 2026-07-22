@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useAnimationControls } from "framer-motion";
 import type { AlgorithmMeta } from "../algorithms/types";
 
 /** Props accepted by {@link StatsBar}. */
@@ -23,8 +23,11 @@ export interface StatsBarProps {
  */
 function AnimatedStat({ label, value }: { label: string; value: number }) {
   const [display, setDisplay] = useState(value);
-  const [pulse, setPulse] = useState(false);
   const prev = useRef(value);
+  // Imperative animation controls — the pulse is fired via controls.start()
+  // (a side-effect, not a setState) so it doesn't trigger a cascading render,
+  // and it auto-respects the reduced-motion preference via <MotionConfig>.
+  const controls = useAnimationControls();
 
   useEffect(() => {
     const from = prev.current;
@@ -32,9 +35,14 @@ function AnimatedStat({ label, value }: { label: string; value: number }) {
     prev.current = to;
     if (from === to) return;
 
-    setPulse(true);
-    const timeout = setTimeout(() => setPulse(false), 250);
+    // Quick scale pop to signal the counter changed.
+    controls.start({
+      scale: [1, 1.25, 1],
+      transition: { duration: 0.4, times: [0, 0.3, 1], ease: "easeOut" },
+    });
 
+    // Count up old → new over 300ms. setDisplay runs inside rAF (not
+    // synchronously in the effect body), so no cascading render.
     const duration = 300;
     const start = performance.now();
 
@@ -46,19 +54,15 @@ function AnimatedStat({ label, value }: { label: string; value: number }) {
     };
     raf = requestAnimationFrame(tick);
 
-    return () => {
-      cancelAnimationFrame(raf);
-      clearTimeout(timeout);
-    };
-  }, [value]);
+    return () => cancelAnimationFrame(raf);
+  }, [value, controls]);
 
   return (
     <div className="flex items-center gap-1.5">
       <span className="text-slate-500 text-xs">{label}</span>
       <motion.span
         className="text-white font-mono font-bold text-xs"
-        animate={{ scale: pulse ? 1.25 : 1 }}
-        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+        animate={controls}
       >
         {display}
       </motion.span>

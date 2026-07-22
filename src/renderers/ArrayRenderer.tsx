@@ -17,10 +17,19 @@ import { StepType } from "../algorithms/types";
 /*  Props                                                                */
 /* ────────────────────────────────────────────────────────────────────── */
 
+/** A single array element carrying a stable identity across swaps. */
+export interface ArrayItem {
+  /** Stable id (derived from the element's original index) — used for
+   *  layout animation so a swap physically slides bars past each other. */
+  id: number;
+  /** The current numeric value at this position. */
+  value: number;
+}
+
 /** Props accepted by {@link ArrayRenderer}. */
 export interface ArrayRendererProps {
-  /** Current array values to visualise. */
-  values: number[];
+  /** Current array items to visualise, in positional order. */
+  values: ArrayItem[];
   /** Payload of the active step. */
   stepPayload: Step["payload"];
   /** Type of the active step. */
@@ -153,7 +162,7 @@ export function ArrayRenderer({
   stepPayload,
   stepType,
 }: ArrayRendererProps) {
-  const maxVal = Math.max(...values, 1);
+  const maxVal = Math.max(...values.map((v) => v.value), 1);
 
   return (
     <div
@@ -170,7 +179,11 @@ export function ArrayRenderer({
       }}
     >
       <AnimatePresence mode="popLayout">
-        {values.map((val, idx) => {
+        {values.map((item, idx) => {
+          // `idx` is the positional index (payload i/j/index refer to
+          // positions); `item.id` is the element's stable identity so
+          // framer's layout animation slides bars on a swap.
+          const val = item.value;
           const color = getBarColor(idx, stepType, stepPayload);
           const glow = getBarGlow(idx, stepType, stepPayload);
           const scale = getBarScale(idx, stepType, stepPayload);
@@ -189,8 +202,8 @@ export function ArrayRenderer({
 
           return (
             <motion.div
-              key={idx}
-              layoutId={`bar-${idx}`}
+              key={item.id}
+              layoutId={`bar-${item.id}`}
               style={{
                 display: "flex",
                 flexDirection: "column",

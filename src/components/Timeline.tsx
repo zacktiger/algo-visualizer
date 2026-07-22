@@ -5,7 +5,7 @@
  * @module components/Timeline
  */
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { motion } from "framer-motion";
 import type { Step } from "../algorithms/types";
 import { STEP_COLORS } from "../constants/colors";
@@ -43,26 +43,43 @@ export function Timeline({
   onSeek,
   onSpeedChange,
 }: TimelineProps) {
+  /* ── Scrubbing state — while true, the thumb/fill track the cursor 1:1
+        (no spring easing lagging behind the pointer). ── */
+  const [isScrubbing, setIsScrubbing] = useState(false);
+
   /* ── Keyboard shortcuts ── */
   const handleKey = useCallback(
     (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const lastStep = Math.max(totalSteps - 1, 0);
       switch (e.key) {
         case "ArrowRight":
           e.preventDefault();
-          onStepForward();
+          // Shift = coarse jump of 10 steps.
+          if (e.shiftKey) onSeek(Math.min(currentStep + 10, lastStep));
+          else onStepForward();
           break;
         case "ArrowLeft":
           e.preventDefault();
-          onStepBack();
+          if (e.shiftKey) onSeek(Math.max(currentStep - 10, 0));
+          else onStepBack();
+          break;
+        case "Home":
+          e.preventDefault();
+          onSeek(0);
+          break;
+        case "End":
+          e.preventDefault();
+          onSeek(lastStep);
           break;
         case " ":
           e.preventDefault();
-          isPlaying ? onPause() : onPlay();
+          if (isPlaying) onPause();
+          else onPlay();
           break;
       }
     },
-    [onStepForward, onStepBack, isPlaying, onPause, onPlay],
+    [onStepForward, onStepBack, onSeek, currentStep, totalSteps, isPlaying, onPause, onPlay],
   );
 
   useEffect(() => {
@@ -94,7 +111,7 @@ export function Timeline({
         <motion.div
           className="absolute left-0 h-1.5 rounded-full"
           animate={{ width: `${progressPct}%` }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          transition={{ duration: isScrubbing ? 0 : 0.18, ease: "easeOut" }}
           style={{
             background: "linear-gradient(90deg, #3B82F6, #60A5FA)",
           }}
@@ -137,7 +154,7 @@ export function Timeline({
         <motion.div
           className="absolute top-1/2 w-4 h-4 rounded-full bg-white z-10 pointer-events-none"
           animate={{ left: `${progressPct}%` }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          transition={{ duration: isScrubbing ? 0 : 0.18, ease: "easeOut" }}
           style={{
             transform: "translate(-50%, -50%)",
             boxShadow: "0 2px 8px rgba(59,130,246,0.3), 0 0 0 2px rgba(59,130,246,0.15)",
@@ -151,6 +168,11 @@ export function Timeline({
           max={Math.max(totalSteps - 1, 0)}
           value={currentStep}
           onChange={(e) => onSeek(Number(e.target.value))}
+          onPointerDown={() => setIsScrubbing(true)}
+          onPointerUp={() => setIsScrubbing(false)}
+          onPointerCancel={() => setIsScrubbing(false)}
+          onBlur={() => setIsScrubbing(false)}
+          aria-label="Timeline scrubber"
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           style={{ zIndex: 15 }}
         />
@@ -220,6 +242,8 @@ export function Timeline({
       {/* ── Keyboard hint ── */}
       <div className="flex items-center justify-center gap-3 text-[10px] text-slate-600">
         <span>← → step</span>
+        <span>⇧← ⇧→ ±10</span>
+        <span>Home/End ends</span>
         <span>Space play/pause</span>
       </div>
     </div>
@@ -244,6 +268,7 @@ function TransportBtn({
     <motion.button
       onClick={onClick}
       title={title}
+      aria-label={title}
       className={`flex items-center justify-center rounded-full text-sm transition-colors ${
         primary
           ? "w-11 h-11 bg-blue-600 text-white hover:bg-blue-500"

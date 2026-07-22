@@ -8,7 +8,7 @@
  * @module components/CompareMode
  */
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import type { AlgorithmMeta, InputData, Step } from "../algorithms/types";
 import { StepType } from "../algorithms/types";
@@ -131,21 +131,36 @@ function Renderer({
   const payload = step?.payload ?? {};
   const sType = step?.type ?? StepType.DONE;
 
-  if (inputData.kind === "array") {
-    // Replay swaps up to current step to get current array state
-    const arr = [...inputData.values];
+  // Replay swaps up to the current step, keeping stable element identities
+  // so swaps slide bars past each other. Memoized to avoid re-replaying the
+  // whole prefix on every render / scrub tick.
+  const arrayValues = useMemo(() => {
+    if (inputData.kind !== "array") return [];
+    const arr = inputData.values.map((value, i) => ({ id: i, value }));
     for (let i = 0; i <= Math.min(currentStep, steps.length - 1); i++) {
       const s = steps[i];
       if (s.type === StepType.SWAP) {
         const si = s.payload.i as number;
         const sj = s.payload.j as number;
-        [arr[si], arr[sj]] = [arr[sj], arr[si]];
+        if (typeof si === "number" && typeof sj === "number") {
+          [arr[si], arr[sj]] = [arr[sj], arr[si]];
+        }
       }
       if (s.type === StepType.SET_CELL && s.payload.index !== undefined) {
-        arr[s.payload.index as number] = s.payload.value as number;
+        const index = s.payload.index as number;
+        arr[index] = { ...arr[index], value: s.payload.value as number };
       }
     }
-    return <ArrayRenderer values={arr} stepPayload={payload} stepType={sType} />;
+    return arr;
+  }, [inputData, steps, currentStep]);
+
+  const table = useMemo(
+    () => (inputData.kind === "dp" ? buildDpTable(steps, currentStep) : []),
+    [inputData, steps, currentStep],
+  );
+
+  if (inputData.kind === "array") {
+    return <ArrayRenderer values={arrayValues} stepPayload={payload} stepType={sType} />;
   }
 
   if (inputData.kind === "graph") {
@@ -159,8 +174,6 @@ function Renderer({
     );
   }
 
-  // DP — build table up to current step
-  const table = buildDpTable(steps, currentStep);
   return <DPTableRenderer table={table} stepPayload={payload} stepType={sType} />;
 }
 

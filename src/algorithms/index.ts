@@ -25,7 +25,6 @@ export interface RegistryEntry {
   /** Static metadata for the algorithm. */
   meta: AlgorithmMeta;
   /** The generator function (signature varies per algorithm). */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   generator: (...args: never[]) => Generator<Step>;
 }
 

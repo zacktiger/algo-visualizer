@@ -6,7 +6,7 @@
  */
 
 import { motion } from "framer-motion";
-import { COLORS, GLOW } from "../constants/colors";
+import { COLORS } from "../constants/colors";
 import type { Node, Edge, Step } from "../algorithms/types";
 import { StepType } from "../algorithms/types";
 
@@ -44,25 +44,6 @@ function nodeFill(
   }
 
   return COLORS.default;
-}
-
-/** Get glow colour for a node (for the ring). */
-function nodeGlow(
-  nodeId: string,
-  stepType: Step["type"],
-  payload: Step["payload"],
-): string | null {
-  const pNode = payload.node as string | undefined;
-
-  if (stepType === StepType.VISIT && pNode === nodeId) return GLOW.visiting;
-  if (stepType === StepType.POP && pNode === nodeId) return GLOW.current;
-  if (stepType === StepType.PUSH && pNode === nodeId) return GLOW.comparing;
-  if (stepType === StepType.RELAX) {
-    const from = payload.from as string | undefined;
-    const to = payload.to as string | undefined;
-    if (nodeId === from || nodeId === to) return GLOW.comparing;
-  }
-  return null;
 }
 
 /** Whether a node is actively being operated on (for pulse). */
@@ -134,9 +115,6 @@ export function GraphRenderer({
     >
       {/* ── SVG Filters for glow ── */}
       <defs>
-        <filter id="node-glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
-        </filter>
         <filter id="edge-glow" x="-20%" y="-20%" width="140%" height="140%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="2" />
         </filter>
@@ -197,34 +175,10 @@ export function GraphRenderer({
       {/* ── Nodes ── */}
       {nodes.map((n) => {
         const fill = nodeFill(n.id, stepType, stepPayload);
-        const glow = nodeGlow(n.id, stepType, stepPayload);
         const active = isActiveNode(n.id, stepType, stepPayload);
 
         return (
           <g key={n.id}>
-            {/* Glow ring */}
-            {glow && (
-              <motion.circle
-                cx={n.x}
-                cy={n.y}
-                r={NODE_R + 6}
-                fill="none"
-                stroke={fill}
-                strokeWidth={2}
-                initial={{ opacity: 0, r: NODE_R }}
-                animate={{
-                  opacity: [0.6, 0.2, 0.6],
-                  r: NODE_R + 8,
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                filter="url(#node-glow)"
-              />
-            )}
-
             {/* Pulse ring on active */}
             {active && (
               <motion.circle
