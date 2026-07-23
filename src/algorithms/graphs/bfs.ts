@@ -86,9 +86,10 @@ export function* bfs(
 
         yield {
           type: StepType.PUSH,
-          payload: { node: neighbour },
+          // `parent` lets the renderer light up the tree edge we traversed.
+          payload: { node: neighbour, parent: node },
           highlightedLines: [7],
-          description: `Enqueuing node ${neighbour}`,
+          description: `Enqueuing node ${neighbour} (from ${node})`,
         };
       }
     }
