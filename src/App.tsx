@@ -74,10 +74,22 @@ export default function App() {
   const handleInputSubmit = useCallback(
     (input: InputData) => {
       if (!algorithm) return;
-      setInputData(input);
+
+      // Binary search operates on (and emits step indices into) a *sorted*
+      // array. Store the sorted copy so the rendered bars line up with the
+      // low/mid/high highlights instead of pointing at the wrong elements.
+      let effectiveInput = input;
+      if (algorithm.id === "binary-search" && input.kind === "array") {
+        effectiveInput = {
+          kind: "array",
+          values: [...input.values].sort((a, b) => a - b),
+        };
+      }
+
+      setInputData(effectiveInput);
       setShowInputEditor(false);
 
-      const generatedSteps = runGenerator(algorithm.id, input);
+      const generatedSteps = runGenerator(algorithm.id, effectiveInput);
       setSteps(generatedSteps);
       setCurrentStep(0);
       resetStats();

@@ -122,11 +122,13 @@ function Renderer({
   step,
   steps,
   currentStep,
+  algoId,
 }: {
   inputData: InputData;
   step: Step | null;
   steps: Step[];
   currentStep: number;
+  algoId?: string;
 }) {
   const payload = step?.payload ?? {};
   const sType = step?.type ?? StepType.DONE;
@@ -136,7 +138,13 @@ function Renderer({
   // whole prefix on every render / scrub tick.
   const arrayValues = useMemo(() => {
     if (inputData.kind !== "array") return [];
-    const arr = inputData.values.map((value, i) => ({ id: i, value }));
+    // Binary search indexes into a sorted array, so the displayed base must
+    // be sorted for its low/mid/high highlights to line up.
+    const base =
+      algoId === "binary-search"
+        ? [...inputData.values].sort((a, b) => a - b)
+        : inputData.values;
+    const arr = base.map((value, i) => ({ id: i, value }));
     for (let i = 0; i <= Math.min(currentStep, steps.length - 1); i++) {
       const s = steps[i];
       if (s.type === StepType.SWAP) {
@@ -152,7 +160,7 @@ function Renderer({
       }
     }
     return arr;
-  }, [inputData, steps, currentStep]);
+  }, [inputData, steps, currentStep, algoId]);
 
   const table = useMemo(
     () => (inputData.kind === "dp" ? buildDpTable(steps, currentStep) : []),
@@ -340,7 +348,7 @@ export function CompareMode({ inputData, category }: CompareModeProps) {
           />
           <div className="rounded-lg p-3" style={{ backgroundColor: "#0F172A" }}>
             {stepsA.length > 0 ? (
-              <Renderer inputData={inputData} step={stepA} steps={stepsA} currentStep={currentStep} />
+              <Renderer inputData={inputData} step={stepA} steps={stepsA} currentStep={currentStep} algoId={algoA?.id} />
             ) : (
               <div className="h-64 flex items-center justify-center text-slate-600 text-sm">
                 Select algorithm A
@@ -364,7 +372,7 @@ export function CompareMode({ inputData, category }: CompareModeProps) {
           />
           <div className="rounded-lg p-3" style={{ backgroundColor: "#0F172A" }}>
             {stepsB.length > 0 ? (
-              <Renderer inputData={inputData} step={stepB} steps={stepsB} currentStep={currentStep} />
+              <Renderer inputData={inputData} step={stepB} steps={stepsB} currentStep={currentStep} algoId={algoB?.id} />
             ) : (
               <div className="h-64 flex items-center justify-center text-slate-600 text-sm">
                 Select algorithm B

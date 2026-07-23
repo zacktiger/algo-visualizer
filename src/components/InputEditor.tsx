@@ -85,9 +85,16 @@ function ArrayInputForm({ onSubmit }: { onSubmit: (input: InputData) => void }) 
         ))}
       </div>
 
+      {values.length < 2 && (
+        <span className="text-[11px] text-amber-400">
+          Enter at least 2 comma-separated numbers.
+        </span>
+      )}
+
       <button
         onClick={() => onSubmit({ kind: "array", values })}
-        className="w-full py-2 rounded bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
+        disabled={values.length < 2}
+        className="w-full py-2 rounded bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
         Submit
       </button>
@@ -281,11 +288,21 @@ function DPInputForm({
 
   if (algorithmId === "knapsack") {
     const parseItems = () => {
-      const pairs = itemsText.split(",").map((s) => s.trim().split(":"));
-      const weights = pairs.map((p) => Number(p[0]));
-      const values = pairs.map((p) => Number(p[1] ?? 0));
+      const weights: number[] = [];
+      const values: number[] = [];
+      for (const raw of itemsText.split(",")) {
+        const [wStr, vStr] = raw.trim().split(":");
+        const w = Number(wStr);
+        const v = Number(vStr);
+        // Skip malformed / non-numeric pairs so the DP table isn't full of NaN.
+        if (!Number.isFinite(w) || !Number.isFinite(v) || w <= 0) continue;
+        weights.push(w);
+        values.push(v);
+      }
       return { weights, values };
     };
+
+    const hasValidItems = parseItems().weights.length > 0;
 
     return (
       <div className="flex flex-col gap-3">
@@ -306,12 +323,18 @@ function DPInputForm({
             className="flex-1 accent-blue-500"
           />
         </div>
+        {!hasValidItems && (
+          <span className="text-[11px] text-amber-400">
+            Enter items as weight:value pairs, e.g. 2:3, 3:4
+          </span>
+        )}
         <button
           onClick={() => {
             const { weights, values } = parseItems();
             onSubmit({ kind: "dp", params: { weights, values, capacity } });
           }}
-          className="w-full py-2 rounded bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
+          disabled={!hasValidItems}
+          className="w-full py-2 rounded bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Submit
         </button>

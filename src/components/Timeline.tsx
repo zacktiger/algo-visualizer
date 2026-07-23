@@ -243,7 +243,7 @@ export function Timeline({
       <div className="flex items-center justify-center gap-3 text-[10px] text-slate-600">
         <span>← → step</span>
         <span>⇧← ⇧→ ±10</span>
-        <span>Home/End ends</span>
+        <span>Home/End jump</span>
         <span>Space play/pause</span>
       </div>
     </div>
