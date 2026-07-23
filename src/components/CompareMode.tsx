@@ -227,12 +227,18 @@ export function CompareMode({ inputData, category }: CompareModeProps) {
   }, [totalSteps]);
 
   const onPlay = () => {
-    if (!engineRef.current) return;
+    const engine = engineRef.current;
+    if (!engine || totalSteps <= 1) return;
+    // Restart from the beginning if we're sitting at the end.
+    const from = currentStep >= totalSteps - 1 ? 0 : currentStep;
+    setCurrentStep(from);
     setIsPlaying(true);
-    engineRef.current.seek(currentStep);
-    engineRef.current.play((idx) => {
-      setCurrentStep(idx);
-    }, speed);
+    engine.seek(from);
+    engine.play(
+      (idx) => setCurrentStep(idx),
+      speed,
+      () => setIsPlaying(false),
+    );
   };
 
   const onPause = () => {
@@ -258,9 +264,11 @@ export function CompareMode({ inputData, category }: CompareModeProps) {
   const onSpeedChange = (s: number) => {
     setSpeed(s);
     if (isPlaying && engineRef.current) {
-      engineRef.current.play((idx) => {
-        setCurrentStep(idx);
-      }, s);
+      engineRef.current.play(
+        (idx) => setCurrentStep(idx),
+        s,
+        () => setIsPlaying(false),
+      );
     }
   };
 

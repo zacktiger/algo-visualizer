@@ -111,13 +111,18 @@ export default function App() {
 
   /* ── Playback handlers ── */
   const onPlay = useCallback(() => {
-    if (!engineRef.current) return;
+    const engine = engineRef.current;
+    if (!engine || steps.length <= 1) return;
+    // If we're sitting at the end, restart from the beginning on play.
+    const from = currentStep >= steps.length - 1 ? 0 : currentStep;
+    setCurrentStep(from);
     setIsPlaying(true);
-    engineRef.current.seek(currentStep);
-    engineRef.current.play((idx) => {
-      setCurrentStep(idx);
-      if (idx >= steps.length - 1) setIsPlaying(false);
-    }, speed);
+    engine.seek(from);
+    engine.play(
+      (idx) => setCurrentStep(idx),
+      speed,
+      () => setIsPlaying(false),
+    );
   }, [currentStep, speed, steps.length, setIsPlaying, setCurrentStep]);
 
   const onPause = useCallback(() => {
@@ -147,14 +152,16 @@ export default function App() {
   const onSpeedChange = useCallback(
     (s: number) => {
       setSpeed(s);
+      // Live speed change: restart the timer at the new interval if playing.
       if (isPlaying && engineRef.current) {
-        engineRef.current.play((idx) => {
-          setCurrentStep(idx);
-          if (idx >= steps.length - 1) setIsPlaying(false);
-        }, s);
+        engineRef.current.play(
+          (idx) => setCurrentStep(idx),
+          s,
+          () => setIsPlaying(false),
+        );
       }
     },
-    [isPlaying, steps.length, setSpeed, setCurrentStep, setIsPlaying],
+    [isPlaying, setSpeed, setCurrentStep, setIsPlaying],
   );
 
   /* ── Current step data ── */

@@ -61,20 +61,36 @@ export class StepEngine {
    * If already playing, the previous timer is cleared and a new one is
    * started (allowing live speed changes).
    *
-   * @param onTick - Callback invoked on every tick with the new step index.
-   * @param speed  - Playback multiplier.  Interval = `1000 / speed` ms.
+   * @param onTick     - Callback invoked on every tick with the new step index.
+   * @param speed      - Playback multiplier.  Interval = `1000 / speed` ms.
+   * @param onComplete - Optional callback fired once playback reaches (or
+   *                     starts already at) the final step and auto-pauses.
+   *                     Lets the UI reset its "playing" flag reliably.
    */
-  play(onTick: (index: number) => void, speed: number): void {
+  play(
+    onTick: (index: number) => void,
+    speed: number,
+    onComplete?: () => void,
+  ): void {
     // Clear any existing timer so we don't stack intervals.
     this.clearTimer();
+
+    // Nothing to advance — we're already at (or past) the last step. Notify
+    // the caller so it doesn't get stuck showing a "playing" state.
+    if (this.currentIndex >= this.steps.length - 1) {
+      this.playing = false;
+      onComplete?.();
+      return;
+    }
 
     this.playing = true;
     const intervalMs = 1000 / speed;
 
     this.timerHandle = setInterval(() => {
       if (this.currentIndex >= this.steps.length - 1) {
-        // Reached the last step — auto-pause.
+        // Reached the last step — auto-pause and notify.
         this.pause();
+        onComplete?.();
         return;
       }
 
