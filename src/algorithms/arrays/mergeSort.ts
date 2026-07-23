@@ -23,7 +23,7 @@ import {
  */
 export function* mergeSort(arr: number[]): Generator<Step> {
   const a = [...arr];
-  yield* mergeSortHelper(a, 0, a.length - 1);
+  yield* mergeSortHelper(a, 0, a.length - 1, a.length);
 
   yield {
     type: StepType.DONE,
@@ -35,30 +35,40 @@ export function* mergeSort(arr: number[]): Generator<Step> {
 
 /**
  * Recursive helper that sorts `a[left..right]` in-place, yielding steps.
+ *
+ * @param n - Total array length, used to detect the final top-level merge.
  */
 function* mergeSortHelper(
   a: number[],
   left: number,
   right: number,
+  n: number,
 ): Generator<Step> {
   if (left >= right) return;
 
   const mid = Math.floor((left + right) / 2);
 
-  yield* mergeSortHelper(a, left, mid);
-  yield* mergeSortHelper(a, mid + 1, right);
-  yield* merge(a, left, mid, right);
+  yield* mergeSortHelper(a, left, mid, n);
+  yield* mergeSortHelper(a, mid + 1, right, n);
+  yield* merge(a, left, mid, right, n);
 }
 
 /**
  * Merge two sorted halves `a[left..mid]` and `a[mid+1..right]`.
+ *
+ * Only the final merge spanning the whole array (`[0..n-1]`) places elements
+ * in their permanent sorted position, so we emit `sorted` marks there — the
+ * array visibly locks in green as the last merge runs. Elements placed by
+ * earlier sub-merges still move, so marking them sorted would be incorrect.
  */
 function* merge(
   a: number[],
   left: number,
   mid: number,
   right: number,
+  n: number,
 ): Generator<Step> {
+  const finalMerge = left === 0 && right === n - 1;
   // Build indices array for the subarray mark
   const indices: number[] = [];
   for (let k = left; k <= right; k++) indices.push(k);
@@ -109,6 +119,7 @@ function* merge(
       };
       j++;
     }
+    if (finalMerge) yield* markSorted(k);
     k++;
   }
 
@@ -120,6 +131,7 @@ function* merge(
       highlightedLines: [7],
       description: `Placing ${leftPart[i]} at index ${k}`,
     };
+    if (finalMerge) yield* markSorted(k);
     i++;
     k++;
   }
@@ -132,9 +144,20 @@ function* merge(
       highlightedLines: [7],
       description: `Placing ${rightPart[j]} at index ${k}`,
     };
+    if (finalMerge) yield* markSorted(k);
     j++;
     k++;
   }
+}
+
+/** Emit a `sorted` mark so the final-position element locks in green. */
+function* markSorted(index: number): Generator<Step> {
+  yield {
+    type: StepType.MARK,
+    payload: { index, state: "sorted" },
+    highlightedLines: [7],
+    description: `Index ${index} is in its final sorted position`,
+  };
 }
 
 /** Static metadata for Merge Sort. */
