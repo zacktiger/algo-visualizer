@@ -5,6 +5,7 @@
  * @module renderers/GraphRenderer
  */
 
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { motion } from "framer-motion";
 import { COLORS } from "../constants/colors";
 import type { Node, Edge, Step } from "../algorithms/types";
@@ -92,11 +93,20 @@ function isActiveEdge(
   return false;
 }
 
-/** Node-id → position lookup. */
-function posMap(nodes: Node[]): Map<string, { x: number; y: number }> {
-  const m = new Map<string, { x: number; y: number }>();
-  for (const n of nodes) m.set(n.id, { x: n.x, y: n.y });
+/** Logical SVG canvas size (matches the viewBox). */
+const CANVAS_W = 600;
+const CANVAS_H = 400;
+
+/** Build an id → {x,y} position record from node props. */
+function seedPositions(nodes: Node[]): Record<string, { x: number; y: number }> {
+  const m: Record<string, { x: number; y: number }> = {};
+  for (const n of nodes) m[n.id] = { x: n.x, y: n.y };
   return m;
+}
+
+/** Clamp a value into `[min, max]`. */
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(v, max));
 }
 
 export function GraphRenderer({
@@ -105,13 +115,71 @@ export function GraphRenderer({
   stepPayload,
   stepType,
 }: GraphRendererProps) {
-  const pos = posMap(nodes);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [positions, setPositions] = useState<
+    Record<string, { x: number; y: number }>
+  >(() => seedPositions(nodes));
+  const [dragId, setDragId] = useState<string | null>(null);
+
+  // Re-seed positions when the node set actually changes (new graph / layout),
+  // using the "adjust state during render" pattern so a fresh `nodes` array
+  // reference on every render doesn't wipe out the user's manual dragging.
+  const seedSig = nodes.map((n) => `${n.id}:${n.x}:${n.y}`).join("|");
+  const [seenSig, setSeenSig] = useState(seedSig);
+  if (seedSig !== seenSig) {
+    setSeenSig(seedSig);
+    setPositions(seedPositions(nodes));
+    setDragId(null);
+  }
+
+  /** Current on-canvas coord for a node id (drag override or seed). */
+  const coord = (id: string) => positions[id] ?? { x: 0, y: 0 };
+
+  /** Convert a client point to logical SVG coordinates. */
+  const toSvg = (clientX: number, clientY: number) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: ((clientX - rect.left) / rect.width) * CANVAS_W,
+      y: ((clientY - rect.top) / rect.height) * CANVAS_H,
+    };
+  };
+
+  const startDrag = (e: ReactPointerEvent, id: string) => {
+    e.stopPropagation();
+    svgRef.current?.setPointerCapture(e.pointerId);
+    setDragId(id);
+  };
+
+  const onPointerMove = (e: ReactPointerEvent) => {
+    if (!dragId) return;
+    const p = toSvg(e.clientX, e.clientY);
+    setPositions((prev) => ({
+      ...prev,
+      [dragId]: {
+        x: clamp(p.x, NODE_R, CANVAS_W - NODE_R),
+        y: clamp(p.y, NODE_R, CANVAS_H - NODE_R),
+      },
+    }));
+  };
+
+  const endDrag = (e: ReactPointerEvent) => {
+    if (svgRef.current?.hasPointerCapture(e.pointerId)) {
+      svgRef.current.releasePointerCapture(e.pointerId);
+    }
+    setDragId(null);
+  };
 
   return (
     <svg
+      ref={svgRef}
       viewBox="0 0 600 400"
       className="w-full h-80 rounded-lg"
-      style={{ background: "#0F172A" }}
+      style={{ background: "#0F172A", touchAction: "none" }}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerLeave={endDrag}
     >
       {/* ── SVG Filters for glow ── */}
       <defs>
@@ -122,9 +190,9 @@ export function GraphRenderer({
 
       {/* ── Edges ── */}
       {edges.map((e, i) => {
-        const a = pos.get(e.from);
-        const b = pos.get(e.to);
-        if (!a || !b) return null;
+        const a = coord(e.from);
+        const b = coord(e.to);
+        if (!positions[e.from] || !positions[e.to]) return null;
         const active = isActiveEdge(e, stepType, stepPayload);
 
         return (
@@ -176,14 +244,20 @@ export function GraphRenderer({
       {nodes.map((n) => {
         const fill = nodeFill(n.id, stepType, stepPayload);
         const active = isActiveNode(n.id, stepType, stepPayload);
+        const p = coord(n.id);
+        const dragging = dragId === n.id;
 
         return (
-          <g key={n.id}>
+          <g
+            key={n.id}
+            onPointerDown={(e) => startDrag(e, n.id)}
+            style={{ cursor: dragging ? "grabbing" : "grab" }}
+          >
             {/* Pulse ring on active */}
             {active && (
               <motion.circle
-                cx={n.x}
-                cy={n.y}
+                cx={p.x}
+                cy={p.y}
                 fill="none"
                 stroke={fill}
                 strokeWidth={2}
@@ -196,28 +270,28 @@ export function GraphRenderer({
 
             {/* Main node circle */}
             <motion.circle
-              cx={n.x}
-              cy={n.y}
+              cx={p.x}
+              cy={p.y}
               r={NODE_R}
               animate={{
                 fill,
-                scale: active ? 1.15 : 1,
+                scale: active || dragging ? 1.15 : 1,
               }}
               transition={{
-                duration: 0.3,
+                duration: dragging ? 0 : 0.3,
                 scale: { type: "spring", stiffness: 400, damping: 15 },
               }}
-              stroke="#94A3B8"
-              strokeWidth={1.5}
-              style={{ transformOrigin: `${n.x}px ${n.y}px` }}
+              stroke={dragging ? "#E2E8F0" : "#94A3B8"}
+              strokeWidth={dragging ? 2.5 : 1.5}
+              style={{ transformOrigin: `${p.x}px ${p.y}px` }}
             />
 
             {/* Node label */}
             <text
-              x={n.x}
-              y={n.y + 5}
+              x={p.x}
+              y={p.y + 5}
               textAnchor="middle"
-              className="text-xs fill-white font-semibold select-none"
+              className="text-xs fill-white font-semibold select-none pointer-events-none"
               style={{ fontFamily: "'JetBrains Mono', monospace" }}
             >
               {n.label}
@@ -231,13 +305,13 @@ export function GraphRenderer({
                 if (to === n.id && newDist !== undefined) {
                   return (
                     <motion.text
-                      x={n.x}
-                      y={n.y - NODE_R - 8}
+                      x={p.x}
+                      y={p.y - NODE_R - 8}
                       textAnchor="middle"
-                      className="text-[10px] font-bold select-none"
+                      className="text-[10px] font-bold select-none pointer-events-none"
                       fill={COLORS.sorted}
-                      initial={{ opacity: 0, y: n.y - NODE_R }}
-                      animate={{ opacity: 1, y: n.y - NODE_R - 8 }}
+                      initial={{ opacity: 0, y: p.y - NODE_R }}
+                      animate={{ opacity: 1, y: p.y - NODE_R - 8 }}
                       transition={{ duration: 0.3 }}
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}
                     >
@@ -251,6 +325,17 @@ export function GraphRenderer({
           </g>
         );
       })}
+
+      {/* ── Hint ── */}
+      <text
+        x={CANVAS_W - 8}
+        y={CANVAS_H - 8}
+        textAnchor="end"
+        className="text-[10px] fill-slate-600 select-none pointer-events-none"
+        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+      >
+        drag nodes to rearrange
+      </text>
     </svg>
   );
 }

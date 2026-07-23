@@ -50,6 +50,8 @@ export default function App() {
 
   /* ── Local state ── */
   const engineRef = useRef<StepEngine | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [showInputEditor, setShowInputEditor] = useState(false);
 
@@ -89,6 +91,23 @@ export default function App() {
   useEffect(() => {
     if (steps.length > 0) computeStats(currentStep);
   }, [currentStep, steps, computeStats]);
+
+  /* ── Input-editor modal: Escape to close + focus management ── */
+  useEffect(() => {
+    if (!showInputEditor) return;
+    // Remember what had focus so we can restore it when the modal closes.
+    lastFocusedRef.current = document.activeElement as HTMLElement | null;
+    modalRef.current?.focus();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowInputEditor(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      lastFocusedRef.current?.focus?.();
+    };
+  }, [showInputEditor]);
 
   /* ── Playback handlers ── */
   const onPlay = useCallback(() => {
@@ -233,10 +252,15 @@ export default function App() {
             onClick={() => setShowInputEditor(false)}
           >
             <motion.div
+              ref={modalRef}
+              tabIndex={-1}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Configure input for ${algorithm.name}`}
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-lg mx-4"
+              className="w-full max-w-lg mx-4 outline-none"
               onClick={(e) => e.stopPropagation()}
             >
               <InputEditor
