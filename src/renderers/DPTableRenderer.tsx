@@ -4,6 +4,7 @@
  * @module renderers/DPTableRenderer
  */
 
+import { Fragment } from "react";
 import { motion } from "framer-motion";
 import { COLORS } from "../constants/colors";
 import type { Step } from "../algorithms/types";
@@ -85,10 +86,9 @@ export function DPTableRenderer({
 
         {/* ── Rows ── */}
         {table.map((row, r) => (
-          <>
+          <Fragment key={`row-${r}`}>
             {/* Row header */}
             <div
-              key={`rh-${r}`}
               className="text-right text-[10px] text-slate-500 font-mono pr-2 py-1 select-none flex items-center justify-end"
             >
               {r}
@@ -117,7 +117,7 @@ export function DPTableRenderer({
                 </motion.div>
               );
             })}
-          </>
+          </Fragment>
         ))}
       </div>
     </div>

@@ -192,6 +192,39 @@ export default function App() {
     return arr;
   }, [inputData, steps, currentStep]);
 
+  /* ── Accumulate permanently-sorted positions (array algos) ── */
+  // Marks stay applied across later steps so the sorted region visibly grows.
+  const sortedIndices = useMemo(() => {
+    const set = new Set<number>();
+    const bound = Math.min(currentStep, steps.length - 1);
+    for (let i = 0; i <= bound; i++) {
+      const s = steps[i];
+      if (s.type !== StepType.MARK) continue;
+      const idx = s.payload.index;
+      const state = s.payload.state;
+      if (typeof idx === "number" && (state === "sorted" || state === "found")) {
+        set.add(idx);
+      }
+    }
+    return set;
+  }, [steps, currentStep]);
+
+  /* ── Accumulate permanently-visited / settled graph nodes ── */
+  const visitedNodes = useMemo(() => {
+    const set = new Set<string>();
+    const bound = Math.min(currentStep, steps.length - 1);
+    for (let i = 0; i <= bound; i++) {
+      const s = steps[i];
+      if (s.type !== StepType.MARK) continue;
+      const node = s.payload.node;
+      const state = s.payload.state;
+      if (typeof node === "string" && (state === "visited" || state === "settled")) {
+        set.add(node);
+      }
+    }
+    return set;
+  }, [steps, currentStep]);
+
   /* ── Build DP table by replaying SET_CELL steps ── */
   const dpTable = useMemo(() => {
     if (!inputData || inputData.kind !== "dp" || steps.length === 0) return [];
@@ -323,6 +356,7 @@ export default function App() {
                     values={currentArrayValues}
                     stepPayload={currentStepData?.payload ?? {}}
                     stepType={currentStepData?.type ?? StepType.DONE}
+                    sortedIndices={sortedIndices}
                   />
                 )}
                 {inputData.kind === "graph" && (
@@ -331,6 +365,7 @@ export default function App() {
                     edges={[...inputData.edges]}
                     stepPayload={currentStepData?.payload ?? {}}
                     stepType={currentStepData?.type ?? StepType.DONE}
+                    visitedNodes={visitedNodes}
                   />
                 )}
                 {inputData.kind === "dp" && (

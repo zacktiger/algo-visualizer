@@ -159,8 +159,47 @@ function Renderer({
     [inputData, steps, currentStep],
   );
 
+  // Accumulate persistent sorted positions / visited nodes up to this step so
+  // the marked region grows instead of flashing for a single frame.
+  const sortedIndices = useMemo(() => {
+    const set = new Set<number>();
+    const bound = Math.min(currentStep, steps.length - 1);
+    for (let i = 0; i <= bound; i++) {
+      const s = steps[i];
+      if (s.type !== StepType.MARK) continue;
+      const idx = s.payload.index;
+      const state = s.payload.state;
+      if (typeof idx === "number" && (state === "sorted" || state === "found")) {
+        set.add(idx);
+      }
+    }
+    return set;
+  }, [steps, currentStep]);
+
+  const visitedNodes = useMemo(() => {
+    const set = new Set<string>();
+    const bound = Math.min(currentStep, steps.length - 1);
+    for (let i = 0; i <= bound; i++) {
+      const s = steps[i];
+      if (s.type !== StepType.MARK) continue;
+      const node = s.payload.node;
+      const state = s.payload.state;
+      if (typeof node === "string" && (state === "visited" || state === "settled")) {
+        set.add(node);
+      }
+    }
+    return set;
+  }, [steps, currentStep]);
+
   if (inputData.kind === "array") {
-    return <ArrayRenderer values={arrayValues} stepPayload={payload} stepType={sType} />;
+    return (
+      <ArrayRenderer
+        values={arrayValues}
+        stepPayload={payload}
+        stepType={sType}
+        sortedIndices={sortedIndices}
+      />
+    );
   }
 
   if (inputData.kind === "graph") {
@@ -170,6 +209,7 @@ function Renderer({
         edges={[...inputData.edges]}
         stepPayload={payload}
         stepType={sType}
+        visitedNodes={visitedNodes}
       />
     );
   }

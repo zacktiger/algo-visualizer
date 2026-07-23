@@ -34,6 +34,12 @@ export interface ArrayRendererProps {
   stepPayload: Step["payload"];
   /** Type of the active step. */
   stepType: Step["type"];
+  /**
+   * Positions that have been permanently marked sorted / found up to the
+   * current step. These stay coloured green across later steps so the user
+   * can watch the sorted region grow, instead of flashing for one frame.
+   */
+  sortedIndices?: Set<number>;
 }
 
 /* ────────────────────────────────────────────────────────────────────── */
@@ -48,6 +54,7 @@ function getBarColor(
   index: number,
   stepType: Step["type"],
   payload: Step["payload"],
+  sortedIndices?: Set<number>,
 ): string {
   // Finished → everything green
   if (stepType === StepType.DONE) return COLORS.done;
@@ -57,13 +64,10 @@ function getBarColor(
   const payloadIndex = payload.index as number | undefined;
   const payloadState = payload.state as string | undefined;
   const payloadMid = payload.mid as number | undefined;
-  const sorted = payload.sorted as number[] | undefined;
   const pivot = payload.pivot as number | undefined;
 
-  // Already-sorted indices
-  if (sorted?.includes(index)) return COLORS.sorted;
-
-  // i / j pointers — swap vs compare
+  // i / j pointers — swap vs compare (active operations take precedence so
+  // you can still see a settled element being compared).
   if (index === payloadI || index === payloadJ) {
     return stepType === StepType.SWAP ? COLORS.swapping : COLORS.comparing;
   }
@@ -80,6 +84,9 @@ function getBarColor(
   // Current index (e.g. SET_CELL, binary-search mid)
   if (payloadIndex === index && stepType === StepType.SET_CELL) return COLORS.current;
   if (payloadMid === index && stepType === StepType.COMPARE) return COLORS.current;
+
+  // Persistently-sorted / found positions stay green across later steps.
+  if (sortedIndices?.has(index)) return COLORS.sorted;
 
   return COLORS.default;
 }
@@ -161,6 +168,7 @@ export function ArrayRenderer({
   values,
   stepPayload,
   stepType,
+  sortedIndices,
 }: ArrayRendererProps) {
   const maxVal = Math.max(...values.map((v) => v.value), 1);
 
@@ -184,7 +192,7 @@ export function ArrayRenderer({
           // positions); `item.id` is the element's stable identity so
           // framer's layout animation slides bars on a swap.
           const val = item.value;
-          const color = getBarColor(idx, stepType, stepPayload);
+          const color = getBarColor(idx, stepType, stepPayload, sortedIndices);
           const glow = getBarGlow(idx, stepType, stepPayload);
           const scale = getBarScale(idx, stepType, stepPayload);
           const widthMul = getBarWidthMultiplier(idx, stepPayload);

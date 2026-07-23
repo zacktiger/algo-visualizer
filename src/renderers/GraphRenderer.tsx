@@ -17,6 +17,12 @@ export interface GraphRendererProps {
   edges: Edge[];
   stepPayload: Step["payload"];
   stepType: Step["type"];
+  /**
+   * Nodes that have been permanently visited / settled up to the current
+   * step. They stay coloured across later steps so the explored region grows
+   * instead of each node flashing for a single frame.
+   */
+  visitedNodes?: Set<string>;
 }
 
 const NODE_R = 24;
@@ -26,6 +32,7 @@ function nodeFill(
   nodeId: string,
   stepType: Step["type"],
   payload: Step["payload"],
+  visitedNodes?: Set<string>,
 ): string {
   const pNode = payload.node as string | undefined;
   const pState = payload.state as string | undefined;
@@ -43,6 +50,9 @@ function nodeFill(
     const to = payload.to as string | undefined;
     if (nodeId === from || nodeId === to) return COLORS.comparing;
   }
+
+  // Already-explored nodes stay coloured across later steps.
+  if (visitedNodes?.has(nodeId)) return COLORS.visited;
 
   return COLORS.default;
 }
@@ -114,6 +124,7 @@ export function GraphRenderer({
   edges,
   stepPayload,
   stepType,
+  visitedNodes,
 }: GraphRendererProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [positions, setPositions] = useState<
@@ -242,7 +253,7 @@ export function GraphRenderer({
 
       {/* ── Nodes ── */}
       {nodes.map((n) => {
-        const fill = nodeFill(n.id, stepType, stepPayload);
+        const fill = nodeFill(n.id, stepType, stepPayload, visitedNodes);
         const active = isActiveNode(n.id, stepType, stepPayload);
         const p = coord(n.id);
         const dragging = dragId === n.id;
