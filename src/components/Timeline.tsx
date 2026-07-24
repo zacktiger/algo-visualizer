@@ -47,11 +47,22 @@ export function Timeline({
         (no spring easing lagging behind the pointer). ── */
   const [isScrubbing, setIsScrubbing] = useState(false);
 
+  /* ── Step index currently hovered on the track (for the preview tooltip). ── */
+  const [hoverStep, setHoverStep] = useState<number | null>(null);
+
+  const lastStep = Math.max(totalSteps - 1, 0);
+
+  /** Map a pointer x-position over the track to the nearest step index. */
+  const stepFromPointer = (clientX: number, el: HTMLElement): number => {
+    const rect = el.getBoundingClientRect();
+    const frac = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
+    return Math.max(0, Math.min(Math.round(frac * lastStep), lastStep));
+  };
+
   /* ── Keyboard shortcuts ── */
   const handleKey = useCallback(
     (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      const lastStep = Math.max(totalSteps - 1, 0);
       switch (e.key) {
         case "ArrowRight":
           e.preventDefault();
@@ -79,7 +90,7 @@ export function Timeline({
           break;
       }
     },
-    [onStepForward, onStepBack, onSeek, currentStep, totalSteps, isPlaying, onPause, onPlay],
+    [onStepForward, onStepBack, onSeek, currentStep, lastStep, isPlaying, onPause, onPlay],
   );
 
   useEffect(() => {
@@ -117,36 +128,60 @@ export function Timeline({
           }}
         />
 
-        {/* Step type dot markers */}
+        {/* Step type dot markers — purely visual; the range input below
+            handles clicks/drags so these don't need their own handlers. */}
         {steps && totalSteps > 0 && (
-          <div className="absolute inset-0">
+          <div className="absolute inset-0 pointer-events-none">
             {steps.map((s, i) => {
               const skip = totalSteps > 100 ? Math.max(1, Math.floor(totalSteps / 80)) : 1;
-              if (i % skip !== 0 && i !== currentStep) return null;
+              const isCurrentMarker = i === currentStep;
+              const isHovered = i === hoverStep;
+              if (i % skip !== 0 && !isCurrentMarker && !isHovered) return null;
 
               const leftPct = totalSteps > 1
                 ? (i / (totalSteps - 1)) * 100
                 : 50;
               const markerColor = STEP_COLORS[s.type] ?? "#64748B";
-              const isCurrentMarker = i === currentStep;
 
               return (
                 <div
                   key={i}
-                  className="absolute top-1/2 rounded-full cursor-pointer"
+                  className="absolute top-1/2 rounded-full"
                   style={{
                     left: `${leftPct}%`,
                     transform: "translate(-50%, -50%)",
-                    width: isCurrentMarker ? 4 : 4,
-                    height: isCurrentMarker ? 4 : 4,
+                    width: isCurrentMarker ? 10 : isHovered ? 7 : 4,
+                    height: isCurrentMarker ? 10 : isHovered ? 7 : 4,
                     backgroundColor: markerColor,
-                    opacity: isCurrentMarker ? 1 : 0.7,
+                    opacity: isCurrentMarker || isHovered ? 1 : 0.7,
+                    boxShadow: isCurrentMarker
+                      ? `0 0 0 2px #0F172A, 0 0 8px ${markerColor}`
+                      : "none",
+                    transition: "width 0.12s, height 0.12s",
                   }}
-                  onClick={() => onSeek(i)}
-                  title={`Step ${i + 1}: ${s.type}`}
                 />
               );
             })}
+          </div>
+        )}
+
+        {/* Hover preview tooltip */}
+        {hoverStep !== null && steps?.[hoverStep] && (
+          <div
+            className="absolute z-20 pointer-events-none -translate-x-1/2 bottom-full mb-1 px-2 py-1 rounded-md whitespace-nowrap text-[10px] font-mono shadow-lg"
+            style={{
+              left: `${lastStep > 0 ? (hoverStep / lastStep) * 100 : 50}%`,
+              backgroundColor: "#0F172A",
+              border: `1px solid ${STEP_COLORS[steps[hoverStep].type] ?? "#334155"}`,
+              maxWidth: 220,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            <span style={{ color: STEP_COLORS[steps[hoverStep].type] ?? "#94A3B8" }}>
+              {hoverStep + 1}. {steps[hoverStep].type}
+            </span>
+            <span className="text-slate-400"> — {steps[hoverStep].description}</span>
           </div>
         )}
 
@@ -165,12 +200,20 @@ export function Timeline({
         <input
           type="range"
           min={0}
-          max={Math.max(totalSteps - 1, 0)}
+          max={lastStep}
           value={currentStep}
           onChange={(e) => onSeek(Number(e.target.value))}
-          onPointerDown={() => setIsScrubbing(true)}
+          onPointerDown={() => {
+            setIsScrubbing(true);
+            // Don't let the play head fight the user while dragging.
+            if (isPlaying) onPause();
+          }}
+          onPointerMove={(e) =>
+            setHoverStep(stepFromPointer(e.clientX, e.currentTarget))
+          }
           onPointerUp={() => setIsScrubbing(false)}
           onPointerCancel={() => setIsScrubbing(false)}
+          onPointerLeave={() => setHoverStep(null)}
           onBlur={() => setIsScrubbing(false)}
           aria-label="Timeline scrubber"
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
