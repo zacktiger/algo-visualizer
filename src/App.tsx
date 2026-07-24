@@ -15,8 +15,8 @@ import { runGenerator } from "./utils/runAlgorithm";
 import { useAlgorithmFrames, EMPTY_FRAME } from "./utils/frames";
 
 import { AlgorithmPicker } from "./components/AlgorithmPicker";
-import { Confetti } from "./components/Confetti";
 import { InputEditor } from "./components/InputEditor";
+import { Legend } from "./components/Legend";
 import { CodePanel } from "./components/CodePanel";
 import { StatePanel } from "./components/StatePanel";
 import { Timeline } from "./components/Timeline";
@@ -243,9 +243,6 @@ export default function App() {
 
   return (
     <div className="app-bg min-h-screen text-slate-100">
-      {!isCompareMode && currentStepData?.type === StepType.DONE && (
-        <Confetti seed={currentStep} />
-      )}
       {/* content sits above the ::after aurora layer */}
       <div className="relative" style={{ zIndex: 1 }}>
       {/* ═══════════════ HEADER ═══════════════ */}
@@ -413,6 +410,11 @@ export default function App() {
                           inputData.values[Math.floor(inputData.values.length / 2)]
                         : undefined
                     }
+                    searchWindow={
+                      algorithm?.id === "binary-search"
+                        ? frame.searchRange
+                        : undefined
+                    }
                   />
                 )}
                 {inputData.kind === "graph" && (
@@ -434,6 +436,8 @@ export default function App() {
                     stepType={currentStepData?.type ?? StepType.DONE}
                   />
                 )}
+
+                <Legend category={category} steps={steps} />
               </div>
 
               {/* Side panels (1/3 width) */}
@@ -456,12 +460,24 @@ export default function App() {
                 key={currentStep}
                 initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="glass rounded-2xl px-4 py-2.5 text-sm text-slate-200"
+                className="glass rounded-2xl px-4 py-2.5 text-sm text-slate-200 flex items-center justify-between gap-3"
                 style={{
                   borderLeft: `3px solid ${STEP_COLORS[currentStepData.type] ?? '#64748B'}`,
                 }}
               >
-                {currentStepData.description}
+                <span>{currentStepData.description}</span>
+                {currentStepData.type === StepType.DONE && (
+                  <span
+                    className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                    style={{
+                      color: "#34D399",
+                      backgroundColor: "rgba(52,211,153,0.14)",
+                      border: "1px solid rgba(52,211,153,0.35)",
+                    }}
+                  >
+                    ✓ complete
+                  </span>
+                )}
               </motion.div>
             )}
 

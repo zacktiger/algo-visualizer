@@ -40,11 +40,18 @@ export function* binarySearch(
       description: `Search range [${low}..${high}], mid=${mid}`,
     };
 
+    const cmp = a[mid] === target ? "==" : a[mid] < target ? "<" : ">";
+    const outcome =
+      a[mid] === target
+        ? "match!"
+        : a[mid] < target
+          ? "too small → search right half"
+          : "too big → search left half";
     yield {
       type: StepType.COMPARE,
-      payload: { mid, target, valMid: a[mid] },
+      payload: { mid, target, valMid: a[mid], result: outcome },
       highlightedLines: [3],
-      description: `Comparing mid value ${a[mid]} with target ${target}`,
+      description: `arr[${mid}] = ${a[mid]} ${cmp} target ${target} → ${outcome}`,
     };
 
     if (a[mid] === target) {

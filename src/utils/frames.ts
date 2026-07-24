@@ -32,6 +32,12 @@ export interface AlgorithmFrame {
   distances: Map<string, number>;
   /** DP table reconstructed so far. */
   dpTable: number[][];
+  /**
+   * Active binary-search window `[lo, hi]` (positional indices). Present only
+   * for binary search; lets the renderer shade the live candidate range so the
+   * halving is visible instead of just the `mid` probe.
+   */
+  searchRange?: { lo: number; hi: number };
   /** Running comparison / swap / mem-op counters. */
   stats: AlgoStats;
 }
@@ -107,6 +113,7 @@ export function deriveFrames(
   const sortedIndices = new Set<number>();
   const visitedNodes = new Set<string>();
   const distances = new Map<string, number>();
+  let searchRange: { lo: number; hi: number } | undefined;
   const stats: AlgoStats = { comparisons: 0, swaps: 0, memOps: 0 };
 
   // DP table: copy-on-write per SET_CELL so earlier frames keep their state.
@@ -115,6 +122,14 @@ export function deriveFrames(
   for (const step of steps) {
     applyStats(stats, step);
     applyMarks(step, sortedIndices, visitedNodes);
+
+    // ── Binary-search window (positional lo..hi carried by its MARK step) ──
+    if (kind === "array" && step.type === StepType.MARK) {
+      const { low, high } = step.payload as { low?: number; high?: number };
+      if (typeof low === "number" && typeof high === "number") {
+        searchRange = { lo: low, hi: high };
+      }
+    }
 
     // ── Array mutations ──
     if (kind === "array") {
@@ -175,6 +190,7 @@ export function deriveFrames(
       visitedNodes: new Set(visitedNodes),
       distances: new Map(distances),
       dpTable,
+      searchRange,
       stats: { ...stats },
     });
   }

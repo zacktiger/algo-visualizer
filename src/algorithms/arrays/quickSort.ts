@@ -86,14 +86,21 @@ function* partition(
   let i = low - 1;
 
   for (let j = low; j < high; j++) {
+    const keepLeft = a[j] <= pivot;
     yield {
       type: StepType.COMPARE,
-      payload: { i: j, j: high, valA: a[j], valB: pivot },
+      payload: {
+        i: j,
+        j: high,
+        valA: a[j],
+        valB: pivot,
+        result: keepLeft ? "≤ pivot" : "> pivot",
+      },
       highlightedLines: [4],
-      description: `Comparing index ${j} (${a[j]}) with pivot (${pivot})`,
+      description: `${a[j]} ${keepLeft ? "≤" : ">"} pivot ${pivot} → ${keepLeft ? "belongs left, swap into place" : "leave on the right"}`,
     };
 
-    if (a[j] <= pivot) {
+    if (keepLeft) {
       i++;
       if (i !== j) {
         [a[i], a[j]] = [a[j], a[i]];

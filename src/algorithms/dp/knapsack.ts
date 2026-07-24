@@ -37,28 +37,38 @@ export function* knapsack(
 
   for (let i = 1; i <= n; i++) {
     for (let w = 0; w <= capacity; w++) {
-      // Provenance: the cell(s) this value was derived from.
+      // Provenance: the cell(s) this value was derived from. We also carry the
+      // two candidate values (skip vs. take) so the recurrence — the actual
+      // lesson of DP — is visible rather than just the winning number.
       const sources: Array<{ row: number; col: number }> = [];
-      if (weights[i - 1] <= w) {
-        const skip = dp[i - 1][w];
-        const take = dp[i - 1][w - weights[i - 1]] + values[i - 1];
+      const fits = weights[i - 1] <= w;
+      const skip = dp[i - 1][w];
+      let take: number | undefined;
+      let took = false;
+      if (fits) {
+        take = dp[i - 1][w - weights[i - 1]] + values[i - 1];
         if (take > skip) {
           dp[i][w] = take;
+          took = true;
           sources.push({ row: i - 1, col: w - weights[i - 1] });
         } else {
           dp[i][w] = skip;
           sources.push({ row: i - 1, col: w });
         }
       } else {
-        dp[i][w] = dp[i - 1][w];
+        dp[i][w] = skip; // = dp[i-1][w]
         sources.push({ row: i - 1, col: w });
       }
 
+      const description = fits
+        ? `dp[${i}][${w}] = max(skip ${skip}, take ${take}) = ${dp[i][w]}  ·  ${took ? "take item " + i : "skip item " + i}`
+        : `item ${i} (weight ${weights[i - 1]}) doesn't fit in ${w} → dp[${i}][${w}] = dp[${i - 1}][${w}] = ${dp[i][w]}`;
+
       yield {
         type: StepType.SET_CELL,
-        payload: { row: i, col: w, value: dp[i][w], sources },
-        highlightedLines: [4],
-        description: `dp[${i}][${w}] = ${dp[i][w]}`,
+        payload: { row: i, col: w, value: dp[i][w], sources, skip, take, took, fits },
+        highlightedLines: fits ? [5, 6] : [7],
+        description,
       };
     }
   }

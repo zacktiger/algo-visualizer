@@ -49,6 +49,13 @@ export interface ArrayRendererProps {
 
   /** Value currently used as the search target (marked with a ▼ indicator). */
   targetValue?: number;
+
+  /**
+   * Active binary-search window `[lo, hi]` (positional indices). Bars outside
+   * the window are dimmed and the `lo` / `hi` bounds are tagged, so the range
+   * halving on each step is visible.
+   */
+  searchWindow?: { lo: number; hi: number };
 }
 
 /* ────────────────────────────────────────────────────────────────────── */
@@ -188,12 +195,16 @@ export function ArrayRenderer({
   sortedIndices,
   onPickValue,
   targetValue,
+  searchWindow,
 }: ArrayRendererProps) {
   // Only the first bar matching the target value gets the ▼ marker.
   const targetIdx =
     targetValue !== undefined
       ? values.findIndex((v) => v.value === targetValue)
       : -1;
+  // The search window is only meaningful mid-search; once DONE we drop the
+  // dimming so the final state reads cleanly.
+  const showWindow = searchWindow !== undefined && stepType !== StepType.DONE;
   const nums = values.map((v) => v.value);
   // Include 0 so the baseline is always within the plotted range.
   const lo = Math.min(0, ...nums);
@@ -261,12 +272,19 @@ export function ArrayRenderer({
           const radius = positive ? "4px 4px 0 0" : "0 0 4px 4px";
           const isTarget = idx === targetIdx;
 
+          // Binary-search window: dim eliminated bars, tag the live bounds.
+          const outOfWindow =
+            showWindow && searchWindow !== undefined && (idx < searchWindow.lo || idx > searchWindow.hi);
+          const isLo = showWindow && searchWindow !== undefined && idx === searchWindow.lo;
+          const isHi = showWindow && searchWindow !== undefined && idx === searchWindow.hi;
+
           return (
             <motion.div
               key={item.id}
               layoutId={`bar-${item.id}`}
               onClick={onPickValue ? () => onPickValue(val) : undefined}
               title={onPickValue ? `Set search target to ${val}` : undefined}
+              animate={{ opacity: outOfWindow ? 0.28 : 1 }}
               style={{
                 display: "flex",
                 flexDirection: "column",
@@ -299,6 +317,31 @@ export function ArrayRenderer({
                     title="Search target"
                   >
                     ▼
+                  </motion.div>
+                )}
+                {/* Binary-search window bounds */}
+                {(isLo || isHi) && (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    style={{
+                      position: "absolute",
+                      bottom: -1,
+                      left: 0,
+                      right: 0,
+                      textAlign: "center",
+                      fontSize: 9,
+                      fontWeight: 700,
+                      lineHeight: 1,
+                      letterSpacing: "0.05em",
+                      color: COLORS.pointer,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      pointerEvents: "none",
+                    }}
+                    title="Binary-search window bound"
+                  >
+                    {isLo && isHi ? "lo·hi" : isLo ? "lo" : "hi"}
                   </motion.div>
                 )}
                 <motion.div

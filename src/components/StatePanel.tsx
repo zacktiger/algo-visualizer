@@ -29,13 +29,28 @@ function ArrayState({
 }) {
   const items: Array<{ label: string; value: string; color: string }> = [];
 
-  if (stepType === StepType.COMPARE || stepType === StepType.SWAP) {
+  // Binary search compares a probe (mid) against the target rather than two
+  // array positions, so surface those instead of i/j.
+  const mid = payload.mid as number | undefined;
+  if (stepType === StepType.COMPARE && mid !== undefined) {
+    const valMid = payload.valMid as number | undefined;
+    const target = payload.target as number | undefined;
+    items.push({ label: "mid", value: `${mid} (${valMid ?? "?"})`, color: COLORS.current });
+    if (target !== undefined) items.push({ label: "target", value: `${target}`, color: COLORS.comparing });
+  } else if (stepType === StepType.COMPARE || stepType === StepType.SWAP) {
     const i = payload.i as number | undefined;
     const j = payload.j as number | undefined;
     const valA = payload.valA as number | undefined;
     const valB = payload.valB as number | undefined;
     if (i !== undefined) items.push({ label: "i", value: `${i} (${valA ?? "?"})`, color: COLORS.comparing });
     if (j !== undefined) items.push({ label: "j", value: `${j} (${valB ?? "?"})`, color: COLORS.comparing });
+  }
+
+  // The comparison outcome ("swap" / "keep" / "search right half" …) — the
+  // reason the algorithm acts, not just what it touched.
+  const result = payload.result as string | undefined;
+  if (result && (stepType === StepType.COMPARE || stepType === StepType.SWAP)) {
+    items.push({ label: "result", value: result, color: COLORS.pivot });
   }
 
   if (stepType === StepType.MARK) {
@@ -102,6 +117,14 @@ function DPState({
       items.push({ label: "cell", value: `dp[${row}][${col}]`, color: COLORS.comparing });
     } else if (index !== undefined) {
       items.push({ label: "cell", value: `dp[${index}]`, color: COLORS.comparing });
+    }
+    // Knapsack carries both candidates so the recurrence is legible.
+    const skip = payload.skip as number | undefined;
+    const take = payload.take as number | undefined;
+    const took = payload.took as boolean | undefined;
+    if (skip !== undefined && take !== undefined) {
+      items.push({ label: "skip", value: `${skip}`, color: took ? COLORS.default : COLORS.sorted });
+      items.push({ label: "take", value: `${take}`, color: took ? COLORS.sorted : COLORS.default });
     }
     if (value !== undefined) items.push({ label: "value", value: `${value}`, color: COLORS.current });
     if (from) items.push({ label: "from", value: from, color: COLORS.visiting });

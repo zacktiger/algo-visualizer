@@ -27,15 +27,22 @@ export function* bubbleSort(arr: number[]): Generator<Step> {
 
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n - i - 1; j++) {
-      // ── Compare ──
+      // ── Compare ── (carry the *outcome* so the learner sees why we act)
+      const willSwap = a[j] > a[j + 1];
       yield {
         type: StepType.COMPARE,
-        payload: { i: j, j: j + 1, valA: a[j], valB: a[j + 1] },
+        payload: {
+          i: j,
+          j: j + 1,
+          valA: a[j],
+          valB: a[j + 1],
+          result: willSwap ? "swap" : "keep",
+        },
         highlightedLines: [3],
-        description: `Comparing index ${j} (${a[j]}) with index ${j + 1} (${a[j + 1]})`,
+        description: `${a[j]} ${willSwap ? ">" : "≤"} ${a[j + 1]} → ${willSwap ? "out of order, swap" : "in order, keep"}`,
       };
 
-      if (a[j] > a[j + 1]) {
+      if (willSwap) {
         // ── Swap ──
         [a[j], a[j + 1]] = [a[j + 1], a[j]];
         yield {
