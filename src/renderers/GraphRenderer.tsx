@@ -149,6 +149,9 @@ export function GraphRenderer({
     Record<string, { x: number; y: number }>
   >(() => seedPositions(nodes));
   const [dragId, setDragId] = useState<string | null>(null);
+  // Keyboard focus ring — SVG nodes are focusable so the graph is navigable
+  // and the start node selectable without a mouse.
+  const [focusId, setFocusId] = useState<string | null>(null);
   // Tracks whether the pointer actually moved during a press, so a plain
   // click (to pick the start node) isn't swallowed by the drag handler.
   const movedRef = useRef(false);
@@ -217,11 +220,17 @@ export function GraphRenderer({
     setDragId(null);
   };
 
+  const graphSummary = `Graph with ${nodes.length} nodes and ${edges.length} edges${
+    startNode ? `, starting from node ${startNode}` : ""
+  }.`;
+
   return (
     <svg
       ref={svgRef}
       viewBox="0 0 600 400"
       className="w-full h-80 rounded-2xl"
+      role="img"
+      aria-label={graphSummary}
       style={{
         background:
           "radial-gradient(120% 120% at 50% 0%, rgba(129,140,248,0.06), rgba(10,7,19,0.35))",
@@ -297,13 +306,46 @@ export function GraphRenderer({
         const p = coord(n.id);
         const dragging = dragId === n.id;
         const isStart = n.id === startNode;
+        const isFocused = focusId === n.id;
+        const dist = distances?.get(n.id);
+        const nodeLabel =
+          `Node ${n.label}` +
+          (isStart ? ", start node" : "") +
+          (dist !== undefined ? `, distance ${dist}` : "") +
+          (onPickStart ? ". Press Enter to set as start node." : "");
 
         return (
           <g
             key={n.id}
+            tabIndex={0}
+            role={onPickStart ? "button" : "img"}
+            aria-label={nodeLabel}
+            aria-pressed={onPickStart ? isStart : undefined}
             onPointerDown={(e) => startDrag(e, n.id)}
-            style={{ cursor: dragging ? "grabbing" : "grab" }}
+            onFocus={() => setFocusId(n.id)}
+            onBlur={() => setFocusId((id) => (id === n.id ? null : id))}
+            onKeyDown={(e) => {
+              if (onPickStart && (e.key === "Enter" || e.key === " ")) {
+                e.preventDefault();
+                onPickStart(n.id);
+              }
+            }}
+            style={{ cursor: dragging ? "grabbing" : "grab", outline: "none" }}
           >
+            {/* Keyboard focus ring */}
+            {isFocused && (
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={NODE_R + 9}
+                fill="none"
+                stroke="#E2E8F0"
+                strokeWidth={2}
+                strokeDasharray="2 3"
+                opacity={0.9}
+              />
+            )}
+
             {/* Source-node ring */}
             {isStart && (
               <circle
@@ -397,7 +439,7 @@ export function GraphRenderer({
         className="text-[10px] fill-slate-600 select-none pointer-events-none"
         style={{ fontFamily: "'JetBrains Mono', monospace" }}
       >
-        {onPickStart ? "click a node to set start · drag to rearrange" : "drag nodes to rearrange"}
+        {onPickStart ? "click or Enter to set start · drag / Tab to navigate" : "drag nodes to rearrange"}
       </text>
     </svg>
   );

@@ -8,6 +8,7 @@
  * @module renderers/ArrayRenderer
  */
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { COLORS, GLOW } from "../constants/colors";
 import type { Step } from "../algorithms/types";
@@ -56,6 +57,13 @@ export interface ArrayRendererProps {
    * halving on each step is visible.
    */
   searchWindow?: { lo: number; hi: number };
+
+  /**
+   * When set, bars become directly manipulable: click (or focus + Enter) one
+   * bar then another to swap them, letting a learner build a specific input
+   * (e.g. an already-sorted or reversed array) in place. Regenerates the run.
+   */
+  onSwap?: (i: number, j: number) => void;
 }
 
 /* ────────────────────────────────────────────────────────────────────── */
@@ -196,7 +204,26 @@ export function ArrayRenderer({
   onPickValue,
   targetValue,
   searchWindow,
+  onSwap,
 }: ArrayRendererProps) {
+  // Swap-to-build: first click selects, second swaps.
+  const [selected, setSelected] = useState<number | null>(null);
+  const interactive = !!onPickValue || !!onSwap;
+
+  const activate = (idx: number, value: number) => {
+    if (onPickValue) {
+      onPickValue(value);
+      return;
+    }
+    if (!onSwap) return;
+    if (selected === null) setSelected(idx);
+    else if (selected === idx) setSelected(null);
+    else {
+      onSwap(selected, idx);
+      setSelected(null);
+    }
+  };
+
   // Only the first bar matching the target value gets the ▼ marker.
   const targetIdx =
     targetValue !== undefined
@@ -232,6 +259,26 @@ export function ArrayRenderer({
         position: "relative",
       }}
     >
+      {/* ── Direct-manipulation hint ── */}
+      {onSwap && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 10,
+            fontSize: 10,
+            color: "#64748B",
+            pointerEvents: "none",
+            userSelect: "none",
+            fontFamily: "'JetBrains Mono', monospace",
+          }}
+        >
+          {selected === null
+            ? "tip: click two bars to swap & build your own input"
+            : "click another bar to swap · Esc-click to cancel"}
+        </div>
+      )}
+
       {/* ── Zero baseline (only shown when there are negative values) ── */}
       {hasNegative && (
         <div
@@ -277,13 +324,38 @@ export function ArrayRenderer({
             showWindow && searchWindow !== undefined && (idx < searchWindow.lo || idx > searchWindow.hi);
           const isLo = showWindow && searchWindow !== undefined && idx === searchWindow.lo;
           const isHi = showWindow && searchWindow !== undefined && idx === searchWindow.hi;
+          const isSelected = selected === idx;
+
+          const title = onPickValue
+            ? `Set search target to ${val}`
+            : onSwap
+              ? selected === null
+                ? `Value ${val} at index ${idx} — click to pick up for a swap`
+                : isSelected
+                  ? "Selected — click again to cancel"
+                  : `Swap index ${selected} with index ${idx}`
+              : undefined;
 
           return (
             <motion.div
               key={item.id}
               layoutId={`bar-${item.id}`}
-              onClick={onPickValue ? () => onPickValue(val) : undefined}
-              title={onPickValue ? `Set search target to ${val}` : undefined}
+              onClick={interactive ? () => activate(idx, val) : undefined}
+              onKeyDown={
+                interactive
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        activate(idx, val);
+                      }
+                    }
+                  : undefined
+              }
+              tabIndex={interactive ? 0 : undefined}
+              role={interactive ? "button" : undefined}
+              aria-label={title}
+              aria-pressed={onSwap ? isSelected : undefined}
+              title={title}
               animate={{ opacity: outOfWindow ? 0.28 : 1 }}
               style={{
                 display: "flex",
@@ -291,7 +363,10 @@ export function ArrayRenderer({
                 alignItems: "center",
                 width: autoWidth,
                 flexShrink: 0,
-                cursor: onPickValue ? "pointer" : "default",
+                cursor: interactive ? "pointer" : "default",
+                outline: isSelected ? `2px solid ${COLORS.pointer}` : "none",
+                outlineOffset: 2,
+                borderRadius: 4,
               }}
               transition={{ duration: 0.25, ease: "easeInOut" }}
             >

@@ -136,6 +136,18 @@ export default function App() {
     [inputData, regenerate],
   );
 
+  // Swap two array positions in place, then re-run — lets a learner build a
+  // specific input (already-sorted, reversed, …) directly on the chart.
+  const onSwapValues = useCallback(
+    (i: number, j: number) => {
+      if (!inputData || inputData.kind !== "array" || i === j) return;
+      const values = inputData.values.slice();
+      [values[i], values[j]] = [values[j], values[i]];
+      regenerate({ ...inputData, values });
+    },
+    [inputData, regenerate],
+  );
+
   /* ── Input-editor modal: Escape to close + focus management ── */
   useEffect(() => {
     if (!showInputEditor) return;
@@ -418,6 +430,9 @@ export default function App() {
                       algorithm?.id === "binary-search"
                         ? frame.searchRange
                         : undefined
+                    }
+                    onSwap={
+                      algorithm?.id === "binary-search" ? undefined : onSwapValues
                     }
                   />
                 )}
