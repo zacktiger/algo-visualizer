@@ -4,14 +4,15 @@
  * @module App
  */
 
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { AlgorithmMeta, InputData, Step } from "./algorithms/types";
 import { AlgorithmCategory, StepType } from "./algorithms/types";
 import { STEP_COLORS } from "./constants/colors";
 import { StepEngine } from "./engine/stepEngine";
 import { useAlgoStore } from "./engine/store";
-import { runGenerator, buildDpTable } from "./utils/runAlgorithm";
+import { runGenerator } from "./utils/runAlgorithm";
+import { useAlgorithmFrames, EMPTY_FRAME } from "./utils/frames";
 
 import { AlgorithmPicker } from "./components/AlgorithmPicker";
 import { InputEditor } from "./components/InputEditor";
@@ -37,7 +38,6 @@ export default function App() {
   const currentStep = useAlgoStore((s) => s.currentStep);
   const isPlaying = useAlgoStore((s) => s.isPlaying);
   const speed = useAlgoStore((s) => s.speed);
-  const stats = useAlgoStore((s) => s.stats);
 
   const setAlgorithm = useAlgoStore((s) => s.setAlgorithm);
   const setInputData = useAlgoStore((s) => s.setInputData);
@@ -45,8 +45,10 @@ export default function App() {
   const setCurrentStep = useAlgoStore((s) => s.setCurrentStep);
   const setIsPlaying = useAlgoStore((s) => s.setIsPlaying);
   const setSpeed = useAlgoStore((s) => s.setSpeed);
-  const computeStats = useAlgoStore((s) => s.computeStats);
-  const resetStats = useAlgoStore((s) => s.resetStats);
+
+  /* ── Precomputed per-step frames (array/graph/dp state + stats) ── */
+  const frames = useAlgorithmFrames(steps, inputData);
+  const frame = frames[currentStep] ?? EMPTY_FRAME;
 
   /* ── Local state ── */
   const engineRef = useRef<StepEngine | null>(null);
@@ -63,11 +65,10 @@ export default function App() {
       setSteps([]);
       setCurrentStep(0);
       setIsPlaying(false);
-      resetStats();
       engineRef.current?.pause();
       engineRef.current = null;
     },
-    [setAlgorithm, setSteps, setCurrentStep, setIsPlaying, resetStats],
+    [setAlgorithm, setSteps, setCurrentStep, setIsPlaying],
   );
 
   /* ── Input submission ── */
@@ -92,17 +93,11 @@ export default function App() {
       const generatedSteps = runGenerator(algorithm.id, effectiveInput);
       setSteps(generatedSteps);
       setCurrentStep(0);
-      resetStats();
 
       engineRef.current = new StepEngine(generatedSteps);
     },
-    [algorithm, setInputData, setSteps, setCurrentStep, resetStats],
+    [algorithm, setInputData, setSteps, setCurrentStep],
   );
-
-  /* ── Recompute stats on step change ── */
-  useEffect(() => {
-    if (steps.length > 0) computeStats(currentStep);
-  }, [currentStep, steps, computeStats]);
 
   /* ── Input-editor modal: Escape to close + focus management ── */
   useEffect(() => {
@@ -180,68 +175,12 @@ export default function App() {
   const currentStepData: Step | null = steps[currentStep] ?? null;
   const category: string = algorithm?.category ?? AlgorithmCategory.ARRAY;
 
-  /* ── Build current array state by replaying swaps (identity-tagged) ── */
-  // Each element keeps a stable `id` (its original index) so a SWAP slides
-  // the two bars past each other instead of morphing heights in place.
-  // Memoized so the O(steps) replay only reruns when inputs actually change.
-  const currentArrayValues = useMemo(() => {
-    if (!inputData || inputData.kind !== "array") return [];
-    const arr = inputData.values.map((value, i) => ({ id: i, value }));
-    for (let i = 0; i <= Math.min(currentStep, steps.length - 1); i++) {
-      const s = steps[i];
-      if (s.type === StepType.SWAP) {
-        const si = s.payload.i as number;
-        const sj = s.payload.j as number;
-        if (typeof si === "number" && typeof sj === "number") {
-          [arr[si], arr[sj]] = [arr[sj], arr[si]];
-        }
-      }
-      if (s.type === StepType.SET_CELL && s.payload.index !== undefined) {
-        const index = s.payload.index as number;
-        arr[index] = { ...arr[index], value: s.payload.value as number };
-      }
-    }
-    return arr;
-  }, [inputData, steps, currentStep]);
-
-  /* ── Accumulate permanently-sorted positions (array algos) ── */
-  // Marks stay applied across later steps so the sorted region visibly grows.
-  const sortedIndices = useMemo(() => {
-    const set = new Set<number>();
-    const bound = Math.min(currentStep, steps.length - 1);
-    for (let i = 0; i <= bound; i++) {
-      const s = steps[i];
-      if (s.type !== StepType.MARK) continue;
-      const idx = s.payload.index;
-      const state = s.payload.state;
-      if (typeof idx === "number" && (state === "sorted" || state === "found")) {
-        set.add(idx);
-      }
-    }
-    return set;
-  }, [steps, currentStep]);
-
-  /* ── Accumulate permanently-visited / settled graph nodes ── */
-  const visitedNodes = useMemo(() => {
-    const set = new Set<string>();
-    const bound = Math.min(currentStep, steps.length - 1);
-    for (let i = 0; i <= bound; i++) {
-      const s = steps[i];
-      if (s.type !== StepType.MARK) continue;
-      const node = s.payload.node;
-      const state = s.payload.state;
-      if (typeof node === "string" && (state === "visited" || state === "settled")) {
-        set.add(node);
-      }
-    }
-    return set;
-  }, [steps, currentStep]);
-
-  /* ── Build DP table by replaying SET_CELL steps ── */
-  const dpTable = useMemo(() => {
-    if (!inputData || inputData.kind !== "dp" || steps.length === 0) return [];
-    return buildDpTable(steps, currentStep);
-  }, [inputData, steps, currentStep]);
+  /* ── Current-frame derived state (precomputed, O(1) lookup) ── */
+  const currentArrayValues = frame.array;
+  const sortedIndices = frame.sortedIndices;
+  const visitedNodes = frame.visitedNodes;
+  const dpTable = frame.dpTable;
+  const stats = frame.stats;
 
   return (
     <div

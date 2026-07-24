@@ -19,36 +19,17 @@ import { GraphRenderer } from "../renderers/GraphRenderer";
 import { DPTableRenderer } from "../renderers/DPTableRenderer";
 import { Timeline } from "./Timeline";
 import { COLORS } from "../constants/colors";
-import { runGenerator, buildDpTable } from "../utils/runAlgorithm";
+import { runGenerator } from "../utils/runAlgorithm";
+import {
+  useAlgorithmFrames,
+  EMPTY_FRAME,
+  type AlgorithmFrame,
+} from "../utils/frames";
 
 /** Props for {@link CompareMode}. */
 export interface CompareModeProps {
   inputData: InputData;
   category: string;
-}
-
-/* ─── Stats helper ───────────────────────────────────────────────── */
-
-interface Stats {
-  comparisons: number;
-  swaps: number;
-  memOps: number;
-}
-
-function computeStats(steps: Step[], upTo: number): Stats {
-  let comparisons = 0;
-  let swaps = 0;
-  let memOps = 0;
-  const bound = Math.min(upTo, steps.length - 1);
-  for (let i = 0; i <= bound; i++) {
-    switch (steps[i].type) {
-      case StepType.COMPARE: comparisons++; break;
-      case StepType.SWAP: swaps++; break;
-      case StepType.DONE: break;
-      default: memOps++; break;
-    }
-  }
-  return { comparisons, swaps, memOps };
 }
 
 /* ─── Side-by-side stat chip ─────────────────────────────────────── */
@@ -115,97 +96,38 @@ function InlinePicker({
   );
 }
 
-/* ─── Shared renderer component ──────────────────────────────────── */
+/**
+ * Binary search indexes into a sorted array, so its displayed base must be
+ * sorted for the low/mid/high highlights to line up.
+ */
+function effectiveInput(input: InputData, algoId?: string): InputData {
+  if (algoId === "binary-search" && input.kind === "array") {
+    return { kind: "array", values: [...input.values].sort((a, b) => a - b) };
+  }
+  return input;
+}
+
+/* ─── Shared renderer component (pure display of a precomputed frame) ── */
 
 function Renderer({
   inputData,
   step,
-  steps,
-  currentStep,
-  algoId,
+  frame,
 }: {
   inputData: InputData;
   step: Step | null;
-  steps: Step[];
-  currentStep: number;
-  algoId?: string;
+  frame: AlgorithmFrame;
 }) {
   const payload = step?.payload ?? {};
   const sType = step?.type ?? StepType.DONE;
 
-  // Replay swaps up to the current step, keeping stable element identities
-  // so swaps slide bars past each other. Memoized to avoid re-replaying the
-  // whole prefix on every render / scrub tick.
-  const arrayValues = useMemo(() => {
-    if (inputData.kind !== "array") return [];
-    // Binary search indexes into a sorted array, so the displayed base must
-    // be sorted for its low/mid/high highlights to line up.
-    const base =
-      algoId === "binary-search"
-        ? [...inputData.values].sort((a, b) => a - b)
-        : inputData.values;
-    const arr = base.map((value, i) => ({ id: i, value }));
-    for (let i = 0; i <= Math.min(currentStep, steps.length - 1); i++) {
-      const s = steps[i];
-      if (s.type === StepType.SWAP) {
-        const si = s.payload.i as number;
-        const sj = s.payload.j as number;
-        if (typeof si === "number" && typeof sj === "number") {
-          [arr[si], arr[sj]] = [arr[sj], arr[si]];
-        }
-      }
-      if (s.type === StepType.SET_CELL && s.payload.index !== undefined) {
-        const index = s.payload.index as number;
-        arr[index] = { ...arr[index], value: s.payload.value as number };
-      }
-    }
-    return arr;
-  }, [inputData, steps, currentStep, algoId]);
-
-  const table = useMemo(
-    () => (inputData.kind === "dp" ? buildDpTable(steps, currentStep) : []),
-    [inputData, steps, currentStep],
-  );
-
-  // Accumulate persistent sorted positions / visited nodes up to this step so
-  // the marked region grows instead of flashing for a single frame.
-  const sortedIndices = useMemo(() => {
-    const set = new Set<number>();
-    const bound = Math.min(currentStep, steps.length - 1);
-    for (let i = 0; i <= bound; i++) {
-      const s = steps[i];
-      if (s.type !== StepType.MARK) continue;
-      const idx = s.payload.index;
-      const state = s.payload.state;
-      if (typeof idx === "number" && (state === "sorted" || state === "found")) {
-        set.add(idx);
-      }
-    }
-    return set;
-  }, [steps, currentStep]);
-
-  const visitedNodes = useMemo(() => {
-    const set = new Set<string>();
-    const bound = Math.min(currentStep, steps.length - 1);
-    for (let i = 0; i <= bound; i++) {
-      const s = steps[i];
-      if (s.type !== StepType.MARK) continue;
-      const node = s.payload.node;
-      const state = s.payload.state;
-      if (typeof node === "string" && (state === "visited" || state === "settled")) {
-        set.add(node);
-      }
-    }
-    return set;
-  }, [steps, currentStep]);
-
   if (inputData.kind === "array") {
     return (
       <ArrayRenderer
-        values={arrayValues}
+        values={frame.array}
         stepPayload={payload}
         stepType={sType}
-        sortedIndices={sortedIndices}
+        sortedIndices={frame.sortedIndices}
       />
     );
   }
@@ -217,12 +139,12 @@ function Renderer({
         edges={[...inputData.edges]}
         stepPayload={payload}
         stepType={sType}
-        visitedNodes={visitedNodes}
+        visitedNodes={frame.visitedNodes}
       />
     );
   }
 
-  return <DPTableRenderer table={table} stepPayload={payload} stepType={sType} />;
+  return <DPTableRenderer table={frame.dpTable} stepPayload={payload} stepType={sType} />;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -320,11 +242,27 @@ export function CompareMode({ inputData, category }: CompareModeProps) {
     }
   };
 
-  // Current step data
-  const stepA = stepsA[Math.min(currentStep, stepsA.length - 1)] ?? null;
-  const stepB = stepsB[Math.min(currentStep, stepsB.length - 1)] ?? null;
-  const statsA = stepsA.length > 0 ? computeStats(stepsA, currentStep) : { comparisons: 0, swaps: 0, memOps: 0 };
-  const statsB = stepsB.length > 0 ? computeStats(stepsB, currentStep) : { comparisons: 0, swaps: 0, memOps: 0 };
+  // Precomputed frames per side (binary search shows a sorted base).
+  const effInputA = useMemo(
+    () => effectiveInput(inputData, algoA?.id),
+    [inputData, algoA],
+  );
+  const effInputB = useMemo(
+    () => effectiveInput(inputData, algoB?.id),
+    [inputData, algoB],
+  );
+  const framesA = useAlgorithmFrames(stepsA, effInputA);
+  const framesB = useAlgorithmFrames(stepsB, effInputB);
+
+  // Current step data (each side clamps to its own last step).
+  const idxA = Math.min(currentStep, stepsA.length - 1);
+  const idxB = Math.min(currentStep, stepsB.length - 1);
+  const stepA = stepsA[idxA] ?? null;
+  const stepB = stepsB[idxB] ?? null;
+  const frameA = framesA[idxA] ?? EMPTY_FRAME;
+  const frameB = framesB[idxB] ?? EMPTY_FRAME;
+  const statsA = frameA.stats;
+  const statsB = frameB.stats;
 
   // Winner detection
   const bothDone =
@@ -348,7 +286,7 @@ export function CompareMode({ inputData, category }: CompareModeProps) {
           />
           <div className="rounded-lg p-3" style={{ backgroundColor: "#0F172A" }}>
             {stepsA.length > 0 ? (
-              <Renderer inputData={inputData} step={stepA} steps={stepsA} currentStep={currentStep} algoId={algoA?.id} />
+              <Renderer inputData={effInputA} step={stepA} frame={frameA} />
             ) : (
               <div className="h-64 flex items-center justify-center text-slate-600 text-sm">
                 Select algorithm A
@@ -372,7 +310,7 @@ export function CompareMode({ inputData, category }: CompareModeProps) {
           />
           <div className="rounded-lg p-3" style={{ backgroundColor: "#0F172A" }}>
             {stepsB.length > 0 ? (
-              <Renderer inputData={inputData} step={stepB} steps={stepsB} currentStep={currentStep} algoId={algoB?.id} />
+              <Renderer inputData={effInputB} step={stepB} frame={frameB} />
             ) : (
               <div className="h-64 flex items-center justify-center text-slate-600 text-sm">
                 Select algorithm B

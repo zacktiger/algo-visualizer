@@ -8,12 +8,7 @@
  */
 
 import { create } from "zustand";
-import {
-  type AlgorithmMeta,
-  type InputData,
-  type Step,
-  StepType,
-} from "../algorithms/types";
+import type { AlgorithmMeta, InputData, Step } from "../algorithms/types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Stats
@@ -71,11 +66,6 @@ export interface AlgoStore {
    */
   speed: number;
 
-  /* ── Statistics ──────────────────────────────────────────────────── */
-
-  /** Running stats that are recomputed as the user scrubs through steps. */
-  stats: AlgoStats;
-
   /* ── Actions ─────────────────────────────────────────────────────── */
 
   /**
@@ -119,30 +109,11 @@ export interface AlgoStore {
    * @param speed - Positive multiplier (e.g. `0.5`, `1`, `2`, `4`).
    */
   setSpeed(speed: number): void;
-
-  /**
-   * Reset all stats counters to zero.
-   */
-  resetStats(): void;
-
-  /**
-   * Recompute stats by scanning `steps[0..upToStep]` (inclusive).
-   *
-   * - `COMPARE` increments `comparisons`
-   * - `SWAP` increments `swaps`
-   * - Every other type (except `DONE`) increments `memOps`
-   *
-   * @param upToStep - Inclusive upper-bound step index.
-   */
-  computeStats(upToStep: number): void;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Store implementation
  * ═══════════════════════════════════════════════════════════════════════ */
-
-/** Convenience constant for zeroed-out stats. */
-const EMPTY_STATS: AlgoStats = { comparisons: 0, swaps: 0, memOps: 0 };
 
 /**
  * Global Zustand store instance.
@@ -152,7 +123,7 @@ const EMPTY_STATS: AlgoStats = { comparisons: 0, swaps: 0, memOps: 0 };
  * const algo = useAlgoStore((s) => s.algorithm);
  * ```
  */
-export const useAlgoStore = create<AlgoStore>((set, get) => ({
+export const useAlgoStore = create<AlgoStore>((set) => ({
   /* ── Initial state ───────────────────────────────────────────────── */
   algorithm: null,
   inputData: null,
@@ -160,7 +131,6 @@ export const useAlgoStore = create<AlgoStore>((set, get) => ({
   currentStep: 0,
   isPlaying: false,
   speed: 1,
-  stats: { ...EMPTY_STATS },
 
   /* ── Actions ─────────────────────────────────────────────────────── */
 
@@ -175,36 +145,4 @@ export const useAlgoStore = create<AlgoStore>((set, get) => ({
   setIsPlaying: (val) => set({ isPlaying: val }),
 
   setSpeed: (speed) => set({ speed }),
-
-  resetStats: () => set({ stats: { ...EMPTY_STATS } }),
-
-  computeStats: (upToStep) => {
-    const { steps } = get();
-    let comparisons = 0;
-    let swaps = 0;
-    let memOps = 0;
-
-    const upperBound = Math.min(upToStep, steps.length - 1);
-
-    for (let i = 0; i <= upperBound; i++) {
-      const step = steps[i];
-      switch (step.type) {
-        case StepType.COMPARE:
-          comparisons += 1;
-          break;
-        case StepType.SWAP:
-          swaps += 1;
-          break;
-        case StepType.DONE:
-          // DONE doesn't count towards any stat.
-          break;
-        default:
-          // VISIT, RELAX, SET_CELL, PUSH, POP, MARK
-          memOps += 1;
-          break;
-      }
-    }
-
-    set({ stats: { comparisons, swaps, memOps } });
-  },
 }));
