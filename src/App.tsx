@@ -438,6 +438,7 @@ export default function App() {
                     table={dpTable}
                     stepPayload={currentStepData?.payload ?? {}}
                     stepType={currentStepData?.type ?? StepType.DONE}
+                    provenance={frame.dpProvenance}
                   />
                 )}
 

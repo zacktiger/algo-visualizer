@@ -31,6 +31,16 @@ export interface Frontier {
   next?: string;
 }
 
+/** How one DP cell was computed — its recurrence sources + a readable
+ *  expression — so a filled cell can be interrogated at rest, not just for the
+ *  single frame it was written. */
+export interface DpCellInfo {
+  sources: Array<{ row: number; col: number }>;
+  value: number;
+  /** Compact recurrence, e.g. `max(skip 3, take 7)`. */
+  expr?: string;
+}
+
 /** Cumulative visualisation state as of one particular step. */
 export interface AlgorithmFrame {
   /** Positional array snapshot (array algorithms). */
@@ -51,6 +61,8 @@ export interface AlgorithmFrame {
   searchRange?: { lo: number; hi: number };
   /** Live queue / stack / priority-queue contents (traversal algorithms). */
   frontier?: Frontier;
+  /** Per-cell DP provenance so far, keyed `${row},${col}` (1-D uses row 0). */
+  dpProvenance?: Map<string, DpCellInfo>;
   /** Running comparison / swap / mem-op counters. */
   stats: AlgoStats;
 }
@@ -143,6 +155,8 @@ export function deriveFrames(
 
   // DP table: copy-on-write per SET_CELL so earlier frames keep their state.
   let dpTable: number[][] = [];
+  // Cumulative per-cell provenance (only relevant for DP algorithms).
+  const dpProvenance = new Map<string, DpCellInfo>();
 
   for (const step of steps) {
     applyStats(stats, step);
@@ -176,16 +190,34 @@ export function deriveFrames(
 
     // ── DP table mutations (row/col 2-D or index 1-D) ──
     if (kind === "dp" && step.type === StepType.SET_CELL) {
-      const { row, col, index, value } = step.payload as {
-        row?: number;
-        col?: number;
-        index?: number;
-        value?: number;
-      };
+      const { row, col, index, value, sources, skip, take, from } =
+        step.payload as {
+          row?: number;
+          col?: number;
+          index?: number;
+          value?: number;
+          sources?: Array<{ row: number; col: number }>;
+          skip?: number;
+          take?: number;
+          from?: string;
+        };
+      let key: string | undefined;
       if (row !== undefined && col !== undefined) {
         dpTable = growAndSet2D(dpTable, row, col, value ?? 0);
+        key = `${row},${col}`;
       } else if (index !== undefined) {
         dpTable = growAndSet1D(dpTable, index, value ?? 0);
+        key = `0,${index}`;
+      }
+      if (key) {
+        // A readable recurrence for the hover inspector.
+        let expr: string | undefined;
+        if (typeof skip === "number" && typeof take === "number") {
+          expr = `max(skip ${skip}, take ${take})`;
+        } else if (typeof from === "string") {
+          expr = `carried from the ${from} neighbour`;
+        }
+        dpProvenance.set(key, { sources: sources ?? [], value: value ?? 0, expr });
       }
     }
 
@@ -261,6 +293,7 @@ export function deriveFrames(
       dpTable,
       searchRange,
       frontier: frontierSnap,
+      dpProvenance: kind === "dp" ? new Map(dpProvenance) : undefined,
       stats: { ...stats },
     });
   }
