@@ -163,6 +163,12 @@ export interface ArrayInput {
 
   /** The numeric values to operate on. */
   readonly values: number[];
+
+  /**
+   * Optional search target (binary search). When omitted the runner picks a
+   * default (the median element, which always succeeds).
+   */
+  readonly target?: number;
 }
 
 /**
@@ -176,6 +182,12 @@ export interface GraphInput {
 
   /** Edges of the graph. */
   readonly edges: Edge[];
+
+  /**
+   * Optional source node id (BFS / DFS / Dijkstra). When omitted the runner
+   * starts from the first node.
+   */
+  readonly startNode?: string;
 }
 
 /**
