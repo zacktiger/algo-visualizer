@@ -457,6 +457,13 @@ export default function App() {
                   />
                 )}
 
+                {inputData.kind === "array" && algorithm?.id !== "binary-search" && (
+                  <p className="mt-3 text-[11px] text-slate-500">
+                    Tip: click two bars (or focus + Enter) to swap them and build
+                    your own input.
+                  </p>
+                )}
+
                 <Legend category={category} steps={steps} />
               </div>
 

@@ -259,26 +259,6 @@ export function ArrayRenderer({
         position: "relative",
       }}
     >
-      {/* ── Direct-manipulation hint ── */}
-      {onSwap && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            right: 10,
-            fontSize: 10,
-            color: "#64748B",
-            pointerEvents: "none",
-            userSelect: "none",
-            fontFamily: "'JetBrains Mono', monospace",
-          }}
-        >
-          {selected === null
-            ? "tip: click two bars to swap & build your own input"
-            : "click another bar to swap · Esc-click to cancel"}
-        </div>
-      )}
-
       {/* ── Zero baseline (only shown when there are negative values) ── */}
       {hasNegative && (
         <div
