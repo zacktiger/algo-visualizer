@@ -84,4 +84,6 @@ export const bubbleSortMeta: AlgorithmMeta = {
     "    if arr[j] > arr[j+1]:",
     "      swap(arr[j], arr[j+1])",
   ],
+  idea: "Sweep the array over and over, swapping any adjacent pair that's out of order; each pass floats the largest remaining value to the end.",
+  invariant: "After pass k, the last k elements are the k largest values, already locked in their final sorted positions.",
 };

@@ -99,4 +99,6 @@ export const knapsackMeta: AlgorithmMeta = {
     "      else: dp[i][w] = dp[i-1][w]",
     "  return dp[n][W]",
   ],
+  idea: "For each item and capacity, take the better of two choices: skip the item, or take it (its value plus the best for the remaining capacity).",
+  invariant: "dp[i][w] is the maximum value achievable using only the first i items within a weight budget of w.",
 };

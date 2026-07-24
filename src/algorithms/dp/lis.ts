@@ -108,4 +108,6 @@ export const lisMeta: AlgorithmMeta = {
     "  maxLen = max(dp)",
     "  traceback to find subsequence",
   ],
+  idea: "The longest increasing subsequence ending at an element is 1 plus the best such subsequence ending at any earlier, smaller element.",
+  invariant: "dp[i] always holds the length of the longest increasing subsequence that ends exactly at index i.",
 };

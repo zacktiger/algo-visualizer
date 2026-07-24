@@ -114,4 +114,6 @@ export const lcsMeta: AlgorithmMeta = {
     "  return dp[m][n]",
     "  traceback to find subsequence",
   ],
+  idea: "Fill a grid where each cell is the LCS length of two prefixes: extend the diagonal on a character match, else inherit the better neighbour.",
+  invariant: "dp[i][j] always equals the LCS length of the prefixes a[0..i) and b[0..j).",
 };

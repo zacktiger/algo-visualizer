@@ -17,6 +17,7 @@ import { useAlgorithmFrames, EMPTY_FRAME } from "./utils/frames";
 import { AlgorithmPicker } from "./components/AlgorithmPicker";
 import { InputEditor } from "./components/InputEditor";
 import { Legend } from "./components/Legend";
+import { ConceptCard } from "./components/ConceptCard";
 import { CodePanel } from "./components/CodePanel";
 import { StatePanel } from "./components/StatePanel";
 import { Timeline } from "./components/Timeline";
@@ -390,6 +391,9 @@ export default function App() {
         {/* ── Normal Mode ── */}
         {!isCompareMode && algorithm && inputData && steps.length > 0 && (
           <div className="flex flex-col gap-4">
+            {/* Concept — mental model before watching */}
+            <ConceptCard key={algorithm.id} meta={algorithm} />
+
             {/* Canvas + Side Panels */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Visualisation canvas (2/3 width) */}

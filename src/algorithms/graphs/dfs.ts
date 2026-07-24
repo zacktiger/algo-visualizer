@@ -144,4 +144,6 @@ export const dfsMeta: AlgorithmMeta = {
     "      if neighbor not in visited:",
     "        stack.push(neighbor)",
   ],
+  idea: "Follow one path as deep as possible before backtracking, using a stack (or recursion) to remember where to resume.",
+  invariant: "The stack holds the current path from the start down to the frontier, plus siblings still waiting to be explored.",
 };

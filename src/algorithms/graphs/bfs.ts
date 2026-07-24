@@ -141,4 +141,6 @@ export const bfsMeta: AlgorithmMeta = {
     "        visited.add(neighbor)",
     "        queue.enqueue(neighbor)",
   ],
+  idea: "Explore outward in waves from the start using a queue, visiting every node at distance k before any node at distance k+1.",
+  invariant: "The queue always holds the current frontier; each node dequeued is reached by a shortest (fewest-edges) path from the start.",
 };

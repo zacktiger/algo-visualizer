@@ -164,4 +164,6 @@ export const dijkstraMeta: AlgorithmMeta = {
     "        dist[v] = dist[u] + w(u,v)",
     "    mark u as settled",
   ],
+  idea: "Grow a set of settled nodes: repeatedly settle the unvisited node with the smallest tentative distance, then relax its outgoing edges.",
+  invariant: "Once a node is settled its distance is final and optimal — no later path can beat it (relies on non-negative edge weights).",
 };

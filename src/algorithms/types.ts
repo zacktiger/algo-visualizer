@@ -114,6 +114,20 @@ export interface AlgorithmMeta {
    * each {@link Step}.
    */
   readonly codeLines: string[];
+
+  /**
+   * One-sentence plain-language description of the core idea — *what strategy*
+   * the algorithm uses. Shown in the Concept card so a learner has the mental
+   * model before watching the animation.
+   */
+  readonly idea?: string;
+
+  /**
+   * The loop invariant / key property that holds throughout — the thing to
+   * watch for that makes the algorithm correct (e.g. "everything left of the
+   * boundary is finalised").
+   */
+  readonly invariant?: string;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

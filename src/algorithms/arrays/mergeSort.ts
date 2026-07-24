@@ -177,4 +177,6 @@ export const mergeSortMeta: AlgorithmMeta = {
     "    pick smaller of left[i], right[j]",
     "    copy remaining elements",
   ],
+  idea: "Recursively split the array in half down to single elements, then merge sorted halves back together into larger sorted runs.",
+  invariant: "Every subarray passed to merge is already sorted, so merging two of them always yields a longer sorted run.",
 };

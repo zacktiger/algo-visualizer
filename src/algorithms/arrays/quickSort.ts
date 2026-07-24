@@ -147,4 +147,6 @@ export const quickSortMeta: AlgorithmMeta = {
     "    quickSort(arr, low, pi-1)",
     "    quickSort(arr, pi+1, high)",
   ],
+  idea: "Pick a pivot and partition the range so smaller elements go left and larger go right, then recursively sort each side.",
+  invariant: "After a partition the pivot is in its final position — everything to its left is ≤ it and everything to its right is > it.",
 };

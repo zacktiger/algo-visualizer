@@ -107,4 +107,6 @@ export const binarySearchMeta: AlgorithmMeta = {
     "    else: high = mid - 1",
     "  return -1",
   ],
+  idea: "Repeatedly halve a sorted array: compare the middle element to the target and throw away the half that can't contain it.",
+  invariant: "The target, if it exists, is always inside the current [lo, hi] window — which shrinks by half every step.",
 };
