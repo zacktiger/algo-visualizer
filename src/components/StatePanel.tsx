@@ -10,12 +10,90 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { Step } from "../algorithms/types";
 import { AlgorithmCategory, StepType } from "../algorithms/types";
 import { COLORS } from "../constants/colors";
+import type { Frontier } from "../utils/frames";
 
 /** Props accepted by {@link StatePanel}. */
 export interface StatePanelProps {
   stepType: Step["type"];
   stepPayload: Step["payload"];
   category: typeof AlgorithmCategory.ARRAY | typeof AlgorithmCategory.GRAPH | typeof AlgorithmCategory.DP;
+  /** Live queue / stack / priority-queue contents (traversal algorithms). */
+  frontier?: Frontier;
+}
+
+/* ─── Frontier (queue / stack / priority queue) ──────────────────── */
+
+const FRONTIER_LABEL: Record<Frontier["kind"], string> = {
+  queue: "Queue · FIFO",
+  stack: "Stack · LIFO",
+  pqueue: "Priority Queue · min-dist",
+};
+
+/**
+ * Renders the traversal's live auxiliary structure as an ordered row of chips.
+ * Watching it grow and drain is the core mental model for BFS/DFS/Dijkstra, so
+ * the "next out" element is ringed and the pop-end is labelled.
+ */
+function FrontierView({ frontier }: { frontier: Frontier }) {
+  const { kind, items, next } = frontier;
+  // Where the next element leaves from: front (left) for a queue/PQ, top
+  // (right) for a stack.
+  const popSide = kind === "stack" ? "right" : "left";
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] uppercase tracking-widest text-sky-300/70 font-semibold">
+          {FRONTIER_LABEL[kind]}
+        </span>
+        <span className="text-[10px] text-slate-500 font-mono">
+          {items.length} item{items.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1.5 min-h-[2rem]" aria-live="polite">
+        {popSide === "left" && items.length > 0 && (
+          <span className="text-[9px] text-slate-500 mr-0.5 select-none">next →</span>
+        )}
+        <AnimatePresence mode="popLayout" initial={false}>
+          {items.map((id, i) => {
+            const isNext = id === next;
+            return (
+              <motion.span
+                key={`${id}-${i}`}
+                layout
+                initial={{ opacity: 0, scale: 0.6 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.6 }}
+                transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                className="grid place-items-center rounded-md font-mono text-xs"
+                style={{
+                  minWidth: 26,
+                  height: 26,
+                  padding: "0 6px",
+                  color: isNext ? "#0b0713" : "#e2e8f0",
+                  backgroundColor: isNext ? COLORS.visiting : "rgba(148,163,184,0.14)",
+                  border: isNext
+                    ? `2px solid ${COLORS.visiting}`
+                    : "1px solid rgba(148,163,184,0.25)",
+                  fontWeight: isNext ? 700 : 500,
+                }}
+                title={isNext ? "next to be processed" : undefined}
+              >
+                {id}
+              </motion.span>
+            );
+          })}
+        </AnimatePresence>
+        {items.length === 0 && (
+          <span className="text-slate-600 text-xs italic">empty</span>
+        )}
+        {popSide === "right" && items.length > 0 && (
+          <span className="text-[9px] text-slate-500 ml-0.5 select-none">← next</span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 /* ─── Sub-renderers ──────────────────────────────────────────────── */
@@ -171,12 +249,13 @@ function StateList({
 
 /* ─── Main export ────────────────────────────────────────────────── */
 
-export function StatePanel({ stepType, stepPayload, category }: StatePanelProps) {
+export function StatePanel({ stepType, stepPayload, category, frontier }: StatePanelProps) {
   return (
     <div className="glass-panel rounded-2xl p-4">
       <h3 className="text-xs uppercase tracking-widest text-fuchsia-300/70 mb-3 font-semibold">
         Algorithm State
       </h3>
+      {frontier && <FrontierView frontier={frontier} />}
       {category === AlgorithmCategory.ARRAY && (
         <ArrayState stepType={stepType} payload={stepPayload} />
       )}

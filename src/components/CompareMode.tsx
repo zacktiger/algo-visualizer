@@ -253,8 +253,8 @@ export function CompareMode({ inputData, category }: CompareModeProps) {
     () => effectiveInput(inputData, algoB?.id),
     [inputData, algoB],
   );
-  const framesA = useAlgorithmFrames(stepsA, effInputA);
-  const framesB = useAlgorithmFrames(stepsB, effInputB);
+  const framesA = useAlgorithmFrames(stepsA, effInputA, algoA?.id);
+  const framesB = useAlgorithmFrames(stepsB, effInputB, algoB?.id);
 
   // Current step data (each side clamps to its own last step).
   const idxA = Math.min(currentStep, stepsA.length - 1);

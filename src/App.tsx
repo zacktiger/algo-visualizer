@@ -48,7 +48,7 @@ export default function App() {
   const setSpeed = useAlgoStore((s) => s.setSpeed);
 
   /* ── Precomputed per-step frames (array/graph/dp state + stats) ── */
-  const frames = useAlgorithmFrames(steps, inputData);
+  const frames = useAlgorithmFrames(steps, inputData, algorithm?.id);
   const frame = frames[currentStep] ?? EMPTY_FRAME;
 
   /* ── Local state ── */
@@ -450,6 +450,7 @@ export default function App() {
                   stepType={currentStepData?.type ?? StepType.DONE}
                   stepPayload={currentStepData?.payload ?? {}}
                   category={algorithm.category}
+                  frontier={frame.frontier}
                 />
               </div>
             </div>

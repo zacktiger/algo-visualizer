@@ -20,6 +20,17 @@ import { StepType } from "../algorithms/types";
 import type { ArrayItem } from "../renderers/ArrayRenderer";
 import type { AlgoStats } from "../engine/store";
 
+/** The live auxiliary data structure a traversal maintains (BFS queue, DFS
+ *  stack, Dijkstra priority queue). Reconstructed from PUSH / POP steps. */
+export interface Frontier {
+  /** Which discipline the container follows — drives labelling + "next out". */
+  kind: "queue" | "stack" | "pqueue";
+  /** Contents in push order (left = earliest pushed). */
+  items: string[];
+  /** The element that will be removed next (front / top / min-distance). */
+  next?: string;
+}
+
 /** Cumulative visualisation state as of one particular step. */
 export interface AlgorithmFrame {
   /** Positional array snapshot (array algorithms). */
@@ -38,8 +49,18 @@ export interface AlgorithmFrame {
    * halving is visible instead of just the `mid` probe.
    */
   searchRange?: { lo: number; hi: number };
+  /** Live queue / stack / priority-queue contents (traversal algorithms). */
+  frontier?: Frontier;
   /** Running comparison / swap / mem-op counters. */
   stats: AlgoStats;
+}
+
+/** Map an algorithm id to the auxiliary structure it maintains, if any. */
+function frontierKindOf(id?: string): Frontier["kind"] | undefined {
+  if (id === "bfs") return "queue";
+  if (id === "dfs") return "stack";
+  if (id === "dijkstra") return "pqueue";
+  return undefined;
 }
 
 /** A zeroed frame, used before any steps exist. */
@@ -99,11 +120,13 @@ function applyMarks(
 export function deriveFrames(
   steps: Step[],
   inputData: InputData | null,
+  algorithmId?: string,
 ): AlgorithmFrame[] {
   const frames: AlgorithmFrame[] = [];
   if (steps.length === 0) return frames;
 
   const kind = inputData?.kind;
+  const frontierKind = frontierKindOf(algorithmId);
 
   // Running state carried across steps.
   let arr: ArrayItem[] =
@@ -114,6 +137,8 @@ export function deriveFrames(
   const visitedNodes = new Set<string>();
   const distances = new Map<string, number>();
   let searchRange: { lo: number; hi: number } | undefined;
+  // Live traversal container (queue/stack/PQ), reconstructed from PUSH/POP.
+  const frontier: string[] = [];
   const stats: AlgoStats = { comparisons: 0, swaps: 0, memOps: 0 };
 
   // DP table: copy-on-write per SET_CELL so earlier frames keep their state.
@@ -176,12 +201,56 @@ export function deriveFrames(
         if (typeof node === "string" && typeof distance === "number") {
           distances.set(node, distance);
         }
+        // Grow the frontier. A priority queue keeps at most one entry per node
+        // (a relaxed node's key is updated in place); a plain queue/stack lets
+        // the same node appear more than once, which is faithful to how they run.
+        if (frontierKind && typeof node === "string") {
+          if (frontierKind === "pqueue") {
+            if (!frontier.includes(node)) frontier.push(node);
+          } else {
+            frontier.push(node);
+          }
+        }
+      } else if (step.type === StepType.POP) {
+        const { node } = step.payload as { node?: string };
+        if (frontierKind && typeof node === "string") {
+          if (frontierKind === "stack") {
+            // Remove the last (top-most) occurrence.
+            for (let k = frontier.length - 1; k >= 0; k--) {
+              if (frontier[k] === node) {
+                frontier.splice(k, 1);
+                break;
+              }
+            }
+          } else {
+            // Queue / PQ: remove the first matching entry.
+            const k = frontier.indexOf(node);
+            if (k >= 0) frontier.splice(k, 1);
+          }
+        }
       } else if (step.type === StepType.RELAX) {
         const { to, newDist } = step.payload as { to?: string; newDist?: number };
         if (typeof to === "string" && typeof newDist === "number") {
           distances.set(to, newDist);
         }
       }
+    }
+
+    // Snapshot the frontier + which element leaves next (front / top / min-key).
+    let frontierSnap: Frontier | undefined;
+    if (frontierKind) {
+      let next: string | undefined;
+      if (frontier.length > 0) {
+        if (frontierKind === "stack") next = frontier[frontier.length - 1];
+        else if (frontierKind === "queue") next = frontier[0];
+        else {
+          // Priority queue: the smallest current tentative distance.
+          next = frontier.reduce((best, n) =>
+            (distances.get(n) ?? Infinity) < (distances.get(best) ?? Infinity) ? n : best,
+          );
+        }
+      }
+      frontierSnap = { kind: frontierKind, items: [...frontier], next };
     }
 
     frames.push({
@@ -191,6 +260,7 @@ export function deriveFrames(
       distances: new Map(distances),
       dpTable,
       searchRange,
+      frontier: frontierSnap,
       stats: { ...stats },
     });
   }
@@ -232,10 +302,14 @@ function growAndSet1D(
   ];
 }
 
-/** React hook: memoized frame derivation keyed on steps + input. */
+/** React hook: memoized frame derivation keyed on steps + input + algorithm. */
 export function useAlgorithmFrames(
   steps: Step[],
   inputData: InputData | null,
+  algorithmId?: string,
 ): AlgorithmFrame[] {
-  return useMemo(() => deriveFrames(steps, inputData), [steps, inputData]);
+  return useMemo(
+    () => deriveFrames(steps, inputData, algorithmId),
+    [steps, inputData, algorithmId],
+  );
 }
