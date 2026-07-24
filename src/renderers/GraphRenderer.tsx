@@ -28,6 +28,12 @@ export interface GraphRendererProps {
   startNode?: string;
 
   /**
+   * Best-known distance per node so far (Dijkstra). Shown as a persistent
+   * badge above each reached node instead of flashing for one RELAX frame.
+   */
+  distances?: Map<string, number>;
+
+  /**
    * When set, clicking a node (without dragging it) invokes this with the
    * node id — used to pick the traversal start node directly on the graph.
    */
@@ -136,6 +142,7 @@ export function GraphRenderer({
   visitedNodes,
   startNode,
   onPickStart,
+  distances,
 }: GraphRendererProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [positions, setPositions] = useState<
@@ -350,30 +357,29 @@ export function GraphRenderer({
               {n.label}
             </text>
 
-            {/* Distance label for Dijkstra */}
-            {stepType === StepType.RELAX && (
-              (() => {
-                const newDist = stepPayload.newDist as number | undefined;
-                const to = stepPayload.to as string | undefined;
-                if (to === n.id && newDist !== undefined) {
-                  return (
-                    <motion.text
-                      x={p.x}
-                      y={p.y - NODE_R - 8}
-                      textAnchor="middle"
-                      className="text-[10px] font-bold select-none pointer-events-none"
-                      fill={COLORS.sorted}
-                      initial={{ opacity: 0, y: p.y - NODE_R }}
-                      animate={{ opacity: 1, y: p.y - NODE_R - 8 }}
-                      transition={{ duration: 0.3 }}
-                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                    >
-                      d={newDist}
-                    </motion.text>
-                  );
-                }
-                return null;
-              })()
+            {/* Persistent best-known distance badge (Dijkstra). Pops when the
+                node is the active RELAX target so an update reads clearly. */}
+            {distances?.has(n.id) && (
+              <motion.text
+                x={p.x}
+                y={p.y - NODE_R - 8}
+                textAnchor="middle"
+                className="text-[10px] font-bold select-none pointer-events-none"
+                fill={COLORS.sorted}
+                animate={{
+                  scale:
+                    stepType === StepType.RELAX && stepPayload.to === n.id
+                      ? [1, 1.4, 1]
+                      : 1,
+                }}
+                transition={{ duration: 0.4 }}
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  transformOrigin: `${p.x}px ${p.y - NODE_R - 8}px`,
+                }}
+              >
+                d={distances.get(n.id)}
+              </motion.text>
             )}
           </g>
         );

@@ -150,13 +150,22 @@ export function deriveFrames(
     }
 
     // ── Dijkstra distances ──
-    if (kind === "graph" && step.type === StepType.RELAX) {
-      const { to, newDist } = step.payload as {
-        to?: string;
-        newDist?: number;
-      };
-      if (typeof to === "string" && typeof newDist === "number") {
-        distances.set(to, newDist);
+    // PUSH carries the (source or relaxed) node's distance; RELAX carries the
+    // improved distance. BFS/DFS PUSH omit `distance`, so they stay unlabelled.
+    if (kind === "graph") {
+      if (step.type === StepType.PUSH) {
+        const { node, distance } = step.payload as {
+          node?: string;
+          distance?: number;
+        };
+        if (typeof node === "string" && typeof distance === "number") {
+          distances.set(node, distance);
+        }
+      } else if (step.type === StepType.RELAX) {
+        const { to, newDist } = step.payload as { to?: string; newDist?: number };
+        if (typeof to === "string" && typeof newDist === "number") {
+          distances.set(to, newDist);
+        }
       }
     }
 

@@ -39,15 +39,22 @@ export function* lis(arr: number[]): Generator<Step> {
   const dp: number[] = new Array<number>(n).fill(1);
 
   for (let i = 1; i < n; i++) {
+    let bestJ = -1;
     for (let j = 0; j < i; j++) {
       if (a[j] < a[i] && dp[j] + 1 > dp[i]) {
         dp[i] = dp[j] + 1;
+        bestJ = j;
       }
     }
 
+    // Provenance: the predecessor index this length was extended from (1-D
+    // table lives on row 0).
+    const sources =
+      bestJ >= 0 ? [{ row: 0, col: bestJ }] : [];
+
     yield {
       type: StepType.SET_CELL,
-      payload: { index: i, value: dp[i] },
+      payload: { index: i, value: dp[i], sources },
       highlightedLines: [4],
       description: `lis[${i}] = ${dp[i]}`,
     };

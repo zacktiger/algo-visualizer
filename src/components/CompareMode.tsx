@@ -140,6 +140,8 @@ function Renderer({
         stepPayload={payload}
         stepType={sType}
         visitedNodes={frame.visitedNodes}
+        startNode={inputData.startNode ?? inputData.nodes[0]?.id}
+        distances={frame.distances}
       />
     );
   }

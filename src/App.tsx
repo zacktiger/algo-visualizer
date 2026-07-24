@@ -363,6 +363,7 @@ export default function App() {
                     visitedNodes={visitedNodes}
                     startNode={inputData.startNode ?? inputData.nodes[0]?.id}
                     onPickStart={onPickStart}
+                    distances={frame.distances}
                   />
                 )}
                 {inputData.kind === "dp" && (

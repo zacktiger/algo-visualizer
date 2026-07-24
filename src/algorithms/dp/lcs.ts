@@ -36,20 +36,27 @@ export function* lcs(a: string, b: string): Generator<Step> {
     for (let j = 1; j <= n; j++) {
       let from: string;
 
+      let sources: Array<{ row: number; col: number }>;
+
       if (a[i - 1] === b[j - 1]) {
         dp[i][j] = dp[i - 1][j - 1] + 1;
         from = "diagonal";
+        sources = [{ row: i - 1, col: j - 1 }];
       } else if (dp[i - 1][j] >= dp[i][j - 1]) {
         dp[i][j] = dp[i - 1][j];
         from = "top";
+        sources = [{ row: i - 1, col: j }];
       } else {
         dp[i][j] = dp[i][j - 1];
         from = "left";
+        sources = [{ row: i, col: j - 1 }];
       }
 
       yield {
         type: StepType.SET_CELL,
-        payload: { row: i, col: j, value: dp[i][j], from },
+        // `sources` are the cell(s) this value was derived from — the renderer
+        // highlights them so the recurrence is visible.
+        payload: { row: i, col: j, value: dp[i][j], from, sources },
         highlightedLines: [4],
         description: `dp[${i}][${j}] = ${dp[i][j]} (from ${from})`,
       };

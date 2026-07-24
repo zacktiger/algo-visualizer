@@ -26,7 +26,24 @@ function isActiveCell(
   payload: Step["payload"],
 ): boolean {
   if (stepType !== StepType.SET_CELL) return false;
-  return payload.row === row && payload.col === col;
+  // 2-D cells carry row/col; 1-D cells carry an index and live on row 0.
+  if (payload.row !== undefined) return payload.row === row && payload.col === col;
+  return payload.index === col && row === 0;
+}
+
+/** Check if a cell fed the active SET_CELL (recurrence provenance). */
+function isSourceCell(
+  row: number,
+  col: number,
+  stepType: Step["type"],
+  payload: Step["payload"],
+): boolean {
+  if (stepType !== StepType.SET_CELL) return false;
+  const sources = payload.sources as
+    | Array<{ row: number; col: number }>
+    | undefined;
+  if (!sources) return false;
+  return sources.some((s) => s.row === row && s.col === col);
 }
 
 /** Check if a cell is part of the traceback path. */
@@ -52,6 +69,7 @@ function cellBg(
   payload: Step["payload"],
 ): string {
   if (isActiveCell(row, col, stepType, payload)) return COLORS.comparing;
+  if (isSourceCell(row, col, stepType, payload)) return COLORS.visiting;
   if (isTracebackCell(row, col, stepType, payload)) return COLORS.current;
   return COLORS.default;
 }
