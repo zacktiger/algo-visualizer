@@ -40,6 +40,15 @@ export interface ArrayRendererProps {
    * can watch the sorted region grow, instead of flashing for one frame.
    */
   sortedIndices?: Set<number>;
+
+  /**
+   * When set, bars become clickable and invoke this with the clicked bar's
+   * value (used to pick a binary-search target directly on the chart).
+   */
+  onPickValue?: (value: number) => void;
+
+  /** Value currently used as the search target (marked with a ▼ indicator). */
+  targetValue?: number;
 }
 
 /* ────────────────────────────────────────────────────────────────────── */
@@ -177,7 +186,14 @@ export function ArrayRenderer({
   stepPayload,
   stepType,
   sortedIndices,
+  onPickValue,
+  targetValue,
 }: ArrayRendererProps) {
+  // Only the first bar matching the target value gets the ▼ marker.
+  const targetIdx =
+    targetValue !== undefined
+      ? values.findIndex((v) => v.value === targetValue)
+      : -1;
   const nums = values.map((v) => v.value);
   // Include 0 so the baseline is always within the plotted range.
   const lo = Math.min(0, ...nums);
@@ -243,22 +259,48 @@ export function ArrayRenderer({
           const isDefault = color === COLORS.default;
           const borderColor = isDefault ? DEFAULT_BORDER : color;
           const radius = positive ? "4px 4px 0 0" : "0 0 4px 4px";
+          const isTarget = idx === targetIdx;
 
           return (
             <motion.div
               key={item.id}
               layoutId={`bar-${item.id}`}
+              onClick={onPickValue ? () => onPickValue(val) : undefined}
+              title={onPickValue ? `Set search target to ${val}` : undefined}
               style={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 width: autoWidth,
                 flexShrink: 0,
+                cursor: onPickValue ? "pointer" : "default",
               }}
               transition={{ duration: 0.25, ease: "easeInOut" }}
             >
               {/* ── Plot area with baseline-anchored bar ── */}
               <div style={{ position: "relative", width: "100%", height: PLOT_HEIGHT }}>
+                {/* Search-target indicator */}
+                {isTarget && (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      textAlign: "center",
+                      fontSize: 12,
+                      lineHeight: 1,
+                      color: COLORS.comparing,
+                      pointerEvents: "none",
+                    }}
+                    title="Search target"
+                  >
+                    ▼
+                  </motion.div>
+                )}
                 <motion.div
                   layout
                   style={{

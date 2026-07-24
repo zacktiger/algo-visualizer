@@ -99,6 +99,41 @@ export default function App() {
     [algorithm, setInputData, setSteps, setCurrentStep],
   );
 
+  /* ── Re-run the current algorithm against a tweaked input ── */
+  // Used by direct manipulation (pick a search target / start node) so the
+  // visualisation updates immediately without reopening the input editor.
+  const regenerate = useCallback(
+    (nextInput: InputData) => {
+      if (!algorithm) return;
+      setInputData(nextInput);
+      const generatedSteps = runGenerator(algorithm.id, nextInput);
+      setSteps(generatedSteps);
+      setCurrentStep(0);
+      setIsPlaying(false);
+      engineRef.current?.pause();
+      engineRef.current = new StepEngine(generatedSteps);
+    },
+    [algorithm, setInputData, setSteps, setCurrentStep, setIsPlaying],
+  );
+
+  const onPickTarget = useCallback(
+    (value: number) => {
+      if (!inputData || inputData.kind !== "array") return;
+      if (inputData.target === value) return;
+      regenerate({ ...inputData, target: value });
+    },
+    [inputData, regenerate],
+  );
+
+  const onPickStart = useCallback(
+    (nodeId: string) => {
+      if (!inputData || inputData.kind !== "graph") return;
+      if ((inputData.startNode ?? inputData.nodes[0]?.id) === nodeId) return;
+      regenerate({ ...inputData, startNode: nodeId });
+    },
+    [inputData, regenerate],
+  );
+
   /* ── Input-editor modal: Escape to close + focus management ── */
   useEffect(() => {
     if (!showInputEditor) return;
@@ -308,6 +343,15 @@ export default function App() {
                     stepPayload={currentStepData?.payload ?? {}}
                     stepType={currentStepData?.type ?? StepType.DONE}
                     sortedIndices={sortedIndices}
+                    onPickValue={
+                      algorithm?.id === "binary-search" ? onPickTarget : undefined
+                    }
+                    targetValue={
+                      algorithm?.id === "binary-search"
+                        ? inputData.target ??
+                          inputData.values[Math.floor(inputData.values.length / 2)]
+                        : undefined
+                    }
                   />
                 )}
                 {inputData.kind === "graph" && (
@@ -317,6 +361,8 @@ export default function App() {
                     stepPayload={currentStepData?.payload ?? {}}
                     stepType={currentStepData?.type ?? StepType.DONE}
                     visitedNodes={visitedNodes}
+                    startNode={inputData.startNode ?? inputData.nodes[0]?.id}
+                    onPickStart={onPickStart}
                   />
                 )}
                 {inputData.kind === "dp" && (

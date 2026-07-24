@@ -23,6 +23,15 @@ export interface GraphRendererProps {
    * instead of each node flashing for a single frame.
    */
   visitedNodes?: Set<string>;
+
+  /** Id of the traversal source node (marked with a ring). */
+  startNode?: string;
+
+  /**
+   * When set, clicking a node (without dragging it) invokes this with the
+   * node id — used to pick the traversal start node directly on the graph.
+   */
+  onPickStart?: (nodeId: string) => void;
 }
 
 const NODE_R = 24;
@@ -125,12 +134,17 @@ export function GraphRenderer({
   stepPayload,
   stepType,
   visitedNodes,
+  startNode,
+  onPickStart,
 }: GraphRendererProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [positions, setPositions] = useState<
     Record<string, { x: number; y: number }>
   >(() => seedPositions(nodes));
   const [dragId, setDragId] = useState<string | null>(null);
+  // Tracks whether the pointer actually moved during a press, so a plain
+  // click (to pick the start node) isn't swallowed by the drag handler.
+  const movedRef = useRef(false);
 
   // Re-seed positions when the node set actually changes (new graph / layout),
   // using the "adjust state during render" pattern so a fresh `nodes` array
@@ -159,12 +173,20 @@ export function GraphRenderer({
 
   const startDrag = (e: ReactPointerEvent, id: string) => {
     e.stopPropagation();
-    svgRef.current?.setPointerCapture(e.pointerId);
+    // Pointer capture can throw if the pointer isn't active (e.g. synthetic
+    // events); it's a nice-to-have, so never let it break dragging.
+    try {
+      svgRef.current?.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    movedRef.current = false;
     setDragId(id);
   };
 
   const onPointerMove = (e: ReactPointerEvent) => {
     if (!dragId) return;
+    movedRef.current = true;
     const p = toSvg(e.clientX, e.clientY);
     setPositions((prev) => ({
       ...prev,
@@ -176,9 +198,15 @@ export function GraphRenderer({
   };
 
   const endDrag = (e: ReactPointerEvent) => {
-    if (svgRef.current?.hasPointerCapture(e.pointerId)) {
-      svgRef.current.releasePointerCapture(e.pointerId);
+    try {
+      if (svgRef.current?.hasPointerCapture(e.pointerId)) {
+        svgRef.current.releasePointerCapture(e.pointerId);
+      }
+    } catch {
+      /* ignore */
     }
+    // A press that didn't move is a click → pick this node as the start.
+    if (dragId && !movedRef.current) onPickStart?.(dragId);
     setDragId(null);
   };
 
@@ -257,6 +285,7 @@ export function GraphRenderer({
         const active = isActiveNode(n.id, stepType, stepPayload);
         const p = coord(n.id);
         const dragging = dragId === n.id;
+        const isStart = n.id === startNode;
 
         return (
           <g
@@ -264,6 +293,19 @@ export function GraphRenderer({
             onPointerDown={(e) => startDrag(e, n.id)}
             style={{ cursor: dragging ? "grabbing" : "grab" }}
           >
+            {/* Source-node ring */}
+            {isStart && (
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={NODE_R + 6}
+                fill="none"
+                stroke={COLORS.sorted}
+                strokeWidth={2}
+                strokeDasharray="4 3"
+              />
+            )}
+
             {/* Pulse ring on active */}
             {active && (
               <motion.circle
@@ -345,7 +387,7 @@ export function GraphRenderer({
         className="text-[10px] fill-slate-600 select-none pointer-events-none"
         style={{ fontFamily: "'JetBrains Mono', monospace" }}
       >
-        drag nodes to rearrange
+        {onPickStart ? "click a node to set start · drag to rearrange" : "drag nodes to rearrange"}
       </text>
     </svg>
   );
