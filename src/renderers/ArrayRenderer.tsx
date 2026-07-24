@@ -266,7 +266,13 @@ export function ArrayRenderer({
                     left: 0,
                     right: 0,
                     borderRadius: radius,
-                    border: `1px solid ${borderColor}`,
+                    // All longhand — mixing the `border` shorthand with
+                    // per-side widths triggers React style-conflict warnings
+                    // during framer-motion's re-renders.
+                    borderStyle: "solid",
+                    borderColor: borderColor,
+                    borderLeftWidth: 1,
+                    borderRightWidth: 1,
                     borderTopWidth: positive ? 2 : 1,
                     borderBottomWidth: positive ? 1 : 2,
                   }}
