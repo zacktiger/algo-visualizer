@@ -109,10 +109,8 @@ export function Timeline({
     : 0;
 
   return (
-    <div
-      className="rounded-xl p-4 flex flex-col gap-3"
-      style={{ backgroundColor: "#1E293B" }}
-    >
+    <div className="glass-panel rounded-3xl p-4 flex flex-col gap-3">
+
       {/* ── Scrubber track ── */}
       <div className="relative w-full h-8 flex items-center">
         {/* Background track */}
@@ -124,7 +122,7 @@ export function Timeline({
           animate={{ width: `${progressPct}%` }}
           transition={{ duration: isScrubbing ? 0 : 0.18, ease: "easeOut" }}
           style={{
-            background: "linear-gradient(90deg, #3B82F6, #60A5FA)",
+            background: "linear-gradient(90deg, #818cf8, #e879f9 60%, #fbbf24)",
           }}
         />
 
@@ -192,7 +190,7 @@ export function Timeline({
           transition={{ duration: isScrubbing ? 0 : 0.18, ease: "easeOut" }}
           style={{
             transform: "translate(-50%, -50%)",
-            boxShadow: "0 2px 8px rgba(59,130,246,0.3), 0 0 0 2px rgba(59,130,246,0.15)",
+            boxShadow: "0 2px 10px rgba(232,121,249,0.5), 0 0 0 3px rgba(129,140,248,0.25)",
           }}
         />
 
@@ -267,18 +265,20 @@ export function Timeline({
       {/* ── Speed selector ── */}
       <div className="flex items-center justify-center gap-2">
         {SPEEDS.map((s) => (
-          <button
+          <motion.button
             key={s}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
             onClick={() => onSpeedChange(s)}
             title={`${s}× speed`}
-            className={`px-3 py-1 rounded-full text-xs font-mono transition-all duration-200 ${
+            className={`px-3.5 py-1 rounded-full text-xs font-semibold font-mono transition ${
               speed === s
-                ? "bg-blue-600 text-white"
-                : "bg-slate-800 text-slate-400 hover:text-slate-200"
+                ? "btn-gradient"
+                : "glass text-slate-400 hover:text-slate-100"
             }`}
           >
             {s}×
-          </button>
+          </motion.button>
         ))}
       </div>
 
@@ -312,19 +312,20 @@ function TransportBtn({
       onClick={onClick}
       title={title}
       aria-label={title}
-      className={`flex items-center justify-center rounded-full text-sm transition-colors ${
+      className={`flex items-center justify-center rounded-full text-sm transition ${
         primary
-          ? "w-11 h-11 bg-blue-600 text-white hover:bg-blue-500"
-          : "w-9 h-9 bg-slate-800 border border-slate-600 text-slate-300 hover:bg-slate-700"
+          ? "w-12 h-12 btn-gradient"
+          : "w-9 h-9 glass text-slate-200 hover:brightness-125"
       }`}
-      whileHover={{ scale: 1.1 }}
-      whileTap={{ scale: 0.9 }}
+      whileHover={{ scale: 1.12 }}
+      whileTap={{ scale: 0.88 }}
+      transition={{ type: "spring", stiffness: 500, damping: 14 }}
       style={
         primary
           ? {
               boxShadow: isPlaying
-                ? "0 0 16px rgba(59,130,246,0.5), 0 0 32px rgba(59,130,246,0.2)"
-                : "0 0 12px rgba(59,130,246,0.4)",
+                ? "0 0 20px rgba(232,121,249,0.55), 0 0 40px rgba(129,140,248,0.3)"
+                : "0 8px 24px -8px rgba(232,121,249,0.6)",
             }
           : undefined
       }

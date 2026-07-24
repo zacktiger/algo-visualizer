@@ -150,8 +150,8 @@ function StateList({
 
 export function StatePanel({ stepType, stepPayload, category }: StatePanelProps) {
   return (
-    <div className="rounded-lg p-4" style={{ backgroundColor: "#1E293B" }}>
-      <h3 className="text-xs uppercase tracking-wider text-slate-500 mb-3">
+    <div className="glass-panel rounded-2xl p-4">
+      <h3 className="text-xs uppercase tracking-widest text-fuchsia-300/70 mb-3 font-semibold">
         Algorithm State
       </h3>
       {category === AlgorithmCategory.ARRAY && (

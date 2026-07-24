@@ -15,6 +15,7 @@ import { runGenerator } from "./utils/runAlgorithm";
 import { useAlgorithmFrames, EMPTY_FRAME } from "./utils/frames";
 
 import { AlgorithmPicker } from "./components/AlgorithmPicker";
+import { Confetti } from "./components/Confetti";
 import { InputEditor } from "./components/InputEditor";
 import { CodePanel } from "./components/CodePanel";
 import { StatePanel } from "./components/StatePanel";
@@ -241,28 +242,20 @@ export default function App() {
   const stats = frame.stats;
 
   return (
-    <div
-      className="min-h-screen text-slate-200"
-      style={{
-        backgroundColor: "#020617",
-        backgroundImage:
-          "radial-gradient(circle, #1e293b 1px, transparent 1px)",
-        backgroundSize: "24px 24px",
-      }}
-    >
+    <div className="app-bg min-h-screen text-slate-100">
+      {!isCompareMode && currentStepData?.type === StepType.DONE && (
+        <Confetti seed={currentStep} />
+      )}
+      {/* content sits above the ::after aurora layer */}
+      <div className="relative" style={{ zIndex: 1 }}>
       {/* ═══════════════ HEADER ═══════════════ */}
-      <header className="flex items-center justify-between px-4 md:px-6 h-12 border-b border-slate-800">
+      <header className="sticky top-0 z-30 flex items-center justify-between px-4 md:px-6 h-14 glass-panel border-x-0 border-t-0 rounded-none">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
-            <img
-              src="/signal.jpg"
-              alt="AlgoViz logo"
-              className="h-8 w-8 rounded-md object-cover ring-1 ring-slate-700"
-            />
-            <h1
-              className="text-base font-bold tracking-tight"
-              style={{ textShadow: '0 0 12px #3B82F6' }}
-            >
+            <div className="grid h-9 w-9 place-items-center rounded-xl btn-gradient text-lg font-bold shadow-lg">
+              ⚡
+            </div>
+            <h1 className="brand-text text-xl font-bold tracking-tight">
               AlgoViz
             </h1>
           </div>
@@ -272,21 +265,23 @@ export default function App() {
           {algorithm && inputData && (
             <button
               onClick={() => setShowInputEditor(true)}
-              className="px-3 py-1.5 rounded-md text-xs bg-slate-800 border border-slate-600 text-slate-300 hover:border-slate-400 transition-colors"
+              className="px-3.5 py-1.5 rounded-full text-xs font-medium glass text-slate-200 hover:brightness-125 transition"
             >
               Edit Input
             </button>
           )}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
             onClick={() => setIsCompareMode((v) => !v)}
-            className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
               isCompareMode
-                ? "bg-purple-600 text-white border border-purple-500"
-                : "bg-blue-600/20 border border-blue-500/40 text-blue-300 hover:bg-blue-600/30"
+                ? "btn-gradient"
+                : "glass text-fuchsia-200 hover:brightness-125"
             }`}
           >
             {isCompareMode ? "✕ Exit Compare" : "⚔ Compare Mode"}
-          </button>
+          </motion.button>
         </div>
       </header>
 
@@ -325,12 +320,60 @@ export default function App() {
       {/* ═══════════════ MAIN CONTENT ═══════════════ */}
       <main className="p-4 md:p-6">
         {!algorithm && !isCompareMode && (
-          <div className="flex flex-col items-center justify-center h-[70vh] text-slate-600">
-            <span className="text-6xl mb-4">⚡</span>
-            <p className="text-lg">Select an algorithm to get started</p>
-            <p className="text-sm mt-1 text-slate-700">
-              Pick from Arrays, Graphs, or DP categories
-            </p>
+          <div className="flex flex-col items-center justify-center h-[74vh] text-center">
+            <motion.div
+              initial={{ scale: 0.7, opacity: 0, rotate: -12 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 200, damping: 12 }}
+              className="grid h-24 w-24 place-items-center rounded-3xl btn-gradient text-6xl shadow-2xl mb-8"
+            >
+              ⚡
+            </motion.div>
+            <motion.h2
+              initial={{ y: 16, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="brand-text text-4xl md:text-5xl font-bold tracking-tight"
+            >
+              Watch algorithms come alive
+            </motion.h2>
+            <motion.p
+              initial={{ y: 16, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.18 }}
+              className="mt-4 max-w-md text-slate-400"
+            >
+              Pick a sorting, searching, graph, or DP algorithm and scrub through
+              every step — bars, nodes, and tables react in real time.
+            </motion.p>
+            <motion.div
+              initial={{ y: 16, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.26 }}
+              className="mt-8 flex flex-wrap items-center justify-center gap-3 text-xs font-medium"
+            >
+              {[
+                { label: "Arrays", color: "#FBBF24" },
+                { label: "Graphs", color: "#38BDF8" },
+                { label: "Dynamic Programming", color: "#E879F9" },
+              ].map((c) => (
+                <span
+                  key={c.label}
+                  className="glass rounded-full px-4 py-2"
+                  style={{ color: c.color }}
+                >
+                  {c.label}
+                </span>
+              ))}
+            </motion.div>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="mt-8 text-sm text-slate-500"
+            >
+              ↑ Start with <span className="text-fuchsia-300">Select Algorithm</span>
+            </motion.p>
           </div>
         )}
 
@@ -353,13 +396,8 @@ export default function App() {
             {/* Canvas + Side Panels */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Visualisation canvas (2/3 width) */}
-              <div
-                className="md:col-span-2 rounded-xl p-4"
-                style={{
-                  backgroundColor: "#0F172A",
-                  boxShadow: 'inset 0 0 80px rgba(0,0,0,0.4)',
-                }}
-              >
+              <div className="md:col-span-2 glass-panel gradient-ring rounded-3xl p-5">
+
                 {inputData.kind === "array" && (
                   <ArrayRenderer
                     values={currentArrayValues}
@@ -414,15 +452,17 @@ export default function App() {
 
             {/* Step description bar */}
             {currentStepData && (
-              <div
-                className="rounded-lg px-4 py-2 text-sm text-slate-300 backdrop-blur-sm"
+              <motion.div
+                key={currentStep}
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="glass rounded-2xl px-4 py-2.5 text-sm text-slate-200"
                 style={{
-                  backgroundColor: 'rgba(15, 23, 42, 0.8)',
                   borderLeft: `3px solid ${STEP_COLORS[currentStepData.type] ?? '#64748B'}`,
                 }}
               >
                 {currentStepData.description}
-              </div>
+              </motion.div>
             )}
 
             {/* Timeline */}
@@ -451,6 +491,7 @@ export default function App() {
           </div>
         )}
       </main>
+      </div>
     </div>
   );
 }

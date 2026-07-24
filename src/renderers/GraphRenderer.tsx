@@ -221,8 +221,12 @@ export function GraphRenderer({
     <svg
       ref={svgRef}
       viewBox="0 0 600 400"
-      className="w-full h-80 rounded-lg"
-      style={{ background: "#0F172A", touchAction: "none" }}
+      className="w-full h-80 rounded-2xl"
+      style={{
+        background:
+          "radial-gradient(120% 120% at 50% 0%, rgba(129,140,248,0.06), rgba(10,7,19,0.35))",
+        touchAction: "none",
+      }}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerLeave={endDrag}

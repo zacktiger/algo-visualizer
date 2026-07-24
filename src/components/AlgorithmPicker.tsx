@@ -84,13 +84,13 @@ export function AlgorithmPicker({ onSelect, selected }: AlgorithmPickerProps) {
         onClick={() => setIsOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-slate-800/60 backdrop-blur border border-blue-500/30 hover:bg-slate-700/60 transition-colors text-sm"
+        className="flex items-center gap-2 px-4 py-1.5 rounded-full glass hover:brightness-125 transition text-sm"
       >
-        <span className="text-blue-400">⚡</span>
-        <span className="text-blue-300 font-mono text-sm">
+        <span className="text-fuchsia-300">⚡</span>
+        <span className="text-slate-100 font-medium text-sm">
           {selected ? selected.name : "Select Algorithm"}
         </span>
-        <span className="text-slate-500 text-xs ml-1">▼</span>
+        <span className={`text-slate-400 text-xs ml-1 transition-transform ${isOpen ? "rotate-180" : ""}`}>▼</span>
       </button>
 
       {/* ── Dropdown panel ── */}
@@ -104,8 +104,7 @@ export function AlgorithmPicker({ onSelect, selected }: AlgorithmPickerProps) {
             role="menu"
             aria-label="Algorithms"
             onKeyDown={onMenuKeyDown}
-            className="absolute top-full left-0 mt-2 w-72 rounded-xl shadow-2xl z-50 overflow-hidden"
-            style={{ backgroundColor: "#1E293B", border: "1px solid #334155" }}
+            className="absolute top-full left-0 mt-2 w-72 rounded-2xl glass-panel z-50 overflow-hidden"
           >
             {/* ── Category tabs ── */}
             <div className="flex border-b border-slate-700">
@@ -113,9 +112,9 @@ export function AlgorithmPicker({ onSelect, selected }: AlgorithmPickerProps) {
                 <button
                   key={cat.key}
                   onClick={() => setActiveTab(cat.key)}
-                  className={`flex-1 py-2 text-xs font-medium transition-colors ${
+                  className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
                     activeTab === cat.key
-                      ? "text-blue-400 border-b-2 border-blue-400"
+                      ? "text-fuchsia-300 border-b-2 border-fuchsia-400"
                       : "text-slate-500 hover:text-slate-300"
                   }`}
                 >
@@ -136,16 +135,16 @@ export function AlgorithmPicker({ onSelect, selected }: AlgorithmPickerProps) {
                       onSelect(entry.meta);
                       setIsOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors group ${
+                    className={`w-full text-left px-3 py-2 rounded-xl text-sm transition group ${
                       isSelected
-                        ? "bg-blue-600/20 text-blue-300"
-                        : "text-slate-300 hover:bg-slate-700"
+                        ? "text-fuchsia-200 bg-fuchsia-500/15 ring-1 ring-fuchsia-400/30"
+                        : "text-slate-300 hover:bg-white/5"
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{entry.meta.name}</span>
                       {isSelected && (
-                        <span className="text-blue-400 text-xs">✓</span>
+                        <span className="text-fuchsia-300 text-xs">✓</span>
                       )}
                     </div>
                     <div className="flex gap-2 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -270,8 +270,13 @@ function GraphInputForm({ onSubmit }: { onSubmit: (input: InputData) => void }) 
       <svg
         ref={svgRef}
         viewBox="0 0 600 400"
-        className="w-full h-56 rounded-lg cursor-crosshair"
-        style={{ backgroundColor: "#0F172A", touchAction: "none" }}
+        className="w-full h-56 rounded-2xl cursor-crosshair"
+        style={{
+          background:
+            "radial-gradient(120% 120% at 50% 0%, rgba(129,140,248,0.08), rgba(10,7,19,0.5))",
+          border: "1px solid rgba(255,255,255,0.08)",
+          touchAction: "none",
+        }}
         onPointerDown={onSvgPointerDown}
         onPointerMove={onSvgPointerMove}
         onPointerUp={onSvgPointerUp}
@@ -474,8 +479,8 @@ function DPInputForm({
 
 export function InputEditor({ category, algorithmId, onSubmit }: InputEditorProps) {
   return (
-    <div className="rounded-lg p-4" style={{ backgroundColor: "#1E293B" }}>
-      <h3 className="text-xs uppercase tracking-wider text-slate-500 mb-3">
+    <div className="glass-panel gradient-ring rounded-3xl p-5">
+      <h3 className="text-xs uppercase tracking-widest text-fuchsia-300/70 mb-3 font-semibold">
         Input
       </h3>
       {category === AlgorithmCategory.ARRAY && <ArrayInputForm onSubmit={onSubmit} />}

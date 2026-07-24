@@ -72,29 +72,29 @@ function AnimatedStat({ label, value }: { label: string; value: number }) {
 
 export function StatsBar({ comparisons, swaps, memOps, meta }: StatsBarProps) {
   return (
-    <div className="flex items-center justify-between h-9 px-4 rounded-lg bg-slate-900/90 backdrop-blur border-t border-slate-800">
+    <div className="flex items-center justify-between h-11 px-5 rounded-2xl glass-panel">
       {/* ── Stats (left) ── */}
       <div className="flex items-center gap-0">
-        <div className="pr-4">
+        <div className="pr-5">
           <AnimatedStat label="Comparisons" value={comparisons} />
         </div>
-        <div className="border-r border-slate-700 h-4" />
-        <div className="px-4">
+        <div className="border-r border-white/10 h-4" />
+        <div className="px-5">
           <AnimatedStat label="Swaps" value={swaps} />
         </div>
-        <div className="border-r border-slate-700 h-4" />
-        <div className="pl-4">
+        <div className="border-r border-white/10 h-4" />
+        <div className="pl-5">
           <AnimatedStat label="Mem Ops" value={memOps} />
         </div>
       </div>
 
       {/* ── Complexity (right) ── */}
-      <div className="flex items-center gap-4 text-xs font-mono">
-        <span className="text-slate-500">
-          Time: <span className="text-green-400">{meta.timeComplexity}</span>
+      <div className="flex items-center gap-3 text-xs font-mono">
+        <span className="glass rounded-full px-3 py-1 text-slate-400">
+          Time <span className="text-emerald-300 font-semibold">{meta.timeComplexity}</span>
         </span>
-        <span className="text-slate-500">
-          Space: <span className="text-blue-400">{meta.spaceComplexity}</span>
+        <span className="glass rounded-full px-3 py-1 text-slate-400">
+          Space <span className="text-sky-300 font-semibold">{meta.spaceComplexity}</span>
         </span>
       </div>
     </div>

@@ -1,49 +1,50 @@
 /**
  * Shared colour palette for algorithm visualisation states.
  *
- * Import these in every renderer / component to keep styling consistent.
+ * Vibrant & playful theme — saturated, high-energy hues on a deep indigo-black
+ * canvas. Import these in every renderer / component to keep styling consistent.
  *
  * @module constants/colors
  */
 
 /** Centralised colour map for every visualisation state. */
 export const COLORS = {
-  default: "#1E293B",
-  comparing: "#F59E0B",
-  swapping: "#EF4444",
-  sorted: "#10B981",
-  visiting: "#3B82F6",
-  visited: "#6366F1",
-  pivot: "#EC4899",
-  current: "#F97316",
-  done: "#10B981",
-  pointer: "#60A5FA",
+  default: "#2b2350", // idle — deep indigo, tinted for the purple-black canvas
+  comparing: "#FBBF24", // amber-400
+  swapping: "#FB7185", // rose-400 (hot pink-red)
+  sorted: "#34D399", // emerald-400
+  visiting: "#38BDF8", // sky-400
+  visited: "#A78BFA", // violet-400
+  pivot: "#E879F9", // fuchsia-400
+  current: "#FB923C", // orange-400
+  done: "#34D399", // emerald-400
+  pointer: "#818CF8", // indigo-400
 } as const;
 
 /** Glow variants — same hue with alpha for box-shadow / filter usage. */
 export const GLOW = {
-  comparing: "rgba(245, 158, 11, 0.5)",
-  swapping: "rgba(239, 68, 68, 0.5)",
-  sorted: "rgba(16, 185, 129, 0.35)",
-  visiting: "rgba(59, 130, 246, 0.5)",
-  visited: "rgba(99, 102, 241, 0.4)",
-  pivot: "rgba(236, 72, 153, 0.5)",
-  current: "rgba(249, 115, 22, 0.5)",
-  done: "rgba(16, 185, 129, 0.35)",
-  pointer: "rgba(96, 165, 250, 0.4)",
+  comparing: "rgba(251, 191, 36, 0.55)",
+  swapping: "rgba(251, 113, 133, 0.55)",
+  sorted: "rgba(52, 211, 153, 0.45)",
+  visiting: "rgba(56, 189, 248, 0.55)",
+  visited: "rgba(167, 139, 250, 0.5)",
+  pivot: "rgba(232, 121, 249, 0.55)",
+  current: "rgba(251, 146, 60, 0.55)",
+  done: "rgba(52, 211, 153, 0.45)",
+  pointer: "rgba(129, 140, 248, 0.5)",
 } as const;
 
 /** Step-type → colour mapping for timeline markers. */
 export const STEP_COLORS: Record<string, string> = {
-  COMPARE: "#F59E0B",
-  SWAP: "#EF4444",
-  VISIT: "#3B82F6",
-  RELAX: "#6366F1",
-  SET_CELL: "#F97316",
-  PUSH: "#8B5CF6",
-  POP: "#A78BFA",
-  MARK: "#10B981",
-  DONE: "#10B981",
+  COMPARE: "#FBBF24",
+  SWAP: "#FB7185",
+  VISIT: "#38BDF8",
+  RELAX: "#A78BFA",
+  SET_CELL: "#FB923C",
+  PUSH: "#C084FC",
+  POP: "#E879F9",
+  MARK: "#34D399",
+  DONE: "#34D399",
 } as const;
 
 /** A single colour value from the palette. */

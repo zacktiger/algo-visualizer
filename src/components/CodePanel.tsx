@@ -17,7 +17,7 @@ export interface CodePanelProps {
 }
 
 /** Deep background used by panel & fade overlays. */
-const BG = "#0A0F1E";
+const BG = "#0f0a1e";
 
 export function CodePanel({ codeLines, highlightedLines }: CodePanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,15 +34,16 @@ export function CodePanel({ codeLines, highlightedLines }: CodePanelProps) {
 
   return (
     <div
-      className="rounded-lg relative"
+      className="rounded-2xl relative overflow-hidden"
       style={{
         backgroundColor: BG,
-        borderLeft: "2px solid rgba(59,130,246,0.2)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "0 18px 50px -24px rgba(0,0,0,0.9)",
       }}
     >
       {/* ── Header ── */}
       <div className="px-4 pt-3 pb-1">
-        <span className="text-[10px] text-slate-500 uppercase tracking-widest select-none">
+        <span className="text-[10px] text-fuchsia-300/70 uppercase tracking-widest font-semibold select-none">
           Code
         </span>
       </div>
@@ -72,16 +73,16 @@ export function CodePanel({ codeLines, highlightedLines }: CodePanelProps) {
               className="flex items-center relative"
               animate={{
                 backgroundColor: isActive
-                  ? "rgba(59,130,246,0.10)"
+                  ? "rgba(232,121,249,0.12)"
                   : "transparent",
               }}
               transition={{ duration: 0.3 }}
               style={{
                 borderLeft: isActive
-                  ? "2px solid #60A5FA"
+                  ? "2px solid #e879f9"
                   : "2px solid transparent",
                 boxShadow: isActive
-                  ? "inset 0 0 20px rgba(59,130,246,0.05)"
+                  ? "inset 0 0 24px rgba(129,140,248,0.10)"
                   : "none",
                 lineHeight: "1.75rem",
               }}
@@ -96,7 +97,7 @@ export function CodePanel({ codeLines, highlightedLines }: CodePanelProps) {
                   transition={{ duration: 0.25 }}
                   style={{
                     background:
-                      "linear-gradient(90deg, rgba(59,130,246,0.08) 0%, transparent 100%)",
+                      "linear-gradient(90deg, rgba(232,121,249,0.10) 0%, transparent 100%)",
                   }}
                 />
               )}
@@ -105,7 +106,7 @@ export function CodePanel({ codeLines, highlightedLines }: CodePanelProps) {
               <span
                 className="w-8 shrink-0 text-right pr-2 select-none font-mono text-xs"
                 style={{
-                  color: isActive ? "#60A5FA" : "#475569",
+                  color: isActive ? "#e879f9" : "#5b5478",
                   fontWeight: isActive ? 600 : 400,
                 }}
               >
@@ -118,7 +119,7 @@ export function CodePanel({ codeLines, highlightedLines }: CodePanelProps) {
                 animate={{
                   color: isActive ? "#FFFFFF" : "#CBD5E1",
                   textShadow: isActive
-                    ? "0 0 10px rgba(59,130,246,0.3)"
+                    ? "0 0 12px rgba(232,121,249,0.4)"
                     : "none",
                 }}
                 transition={{ duration: 0.25 }}
