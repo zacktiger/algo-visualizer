@@ -4,7 +4,7 @@
  * @module components/AlgorithmPicker
  */
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlgorithmCategory } from "../algorithms/types";
 import type { AlgorithmMeta } from "../algorithms/types";
@@ -25,16 +25,65 @@ const CATEGORIES = [
 export function AlgorithmPicker({ onSelect, selected }: AlgorithmPickerProps) {
   const [activeTab, setActiveTab] = useState<string>(AlgorithmCategory.ARRAY);
   const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const filtered = ALGORITHM_REGISTRY.filter(
     (e) => e.meta.category === activeTab,
   );
 
+  /* ── Dismissal + keyboard: close on outside-click / Escape ── */
+  useEffect(() => {
+    if (!isOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    // Move focus into the menu so arrow keys work immediately.
+    const first = containerRef.current?.querySelector<HTMLElement>(
+      '[role="menuitem"]',
+    );
+    first?.focus();
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [isOpen]);
+
+  /** Roving focus among the algorithm items with the arrow keys. */
+  const onMenuKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const items = Array.from(
+      containerRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ??
+        [],
+    );
+    if (items.length === 0) return;
+    const idx = items.indexOf(document.activeElement as HTMLElement);
+    const next =
+      e.key === "ArrowDown"
+        ? items[(idx + 1) % items.length]
+        : items[(idx - 1 + items.length) % items.length];
+    next.focus();
+  };
+
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       {/* ── Trigger button ── */}
       <button
+        ref={triggerRef}
         onClick={() => setIsOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
         className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-slate-800/60 backdrop-blur border border-blue-500/30 hover:bg-slate-700/60 transition-colors text-sm"
       >
         <span className="text-blue-400">⚡</span>
@@ -52,6 +101,9 @@ export function AlgorithmPicker({ onSelect, selected }: AlgorithmPickerProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.96 }}
             transition={{ duration: 0.15 }}
+            role="menu"
+            aria-label="Algorithms"
+            onKeyDown={onMenuKeyDown}
             className="absolute top-full left-0 mt-2 w-72 rounded-xl shadow-2xl z-50 overflow-hidden"
             style={{ backgroundColor: "#1E293B", border: "1px solid #334155" }}
           >
@@ -79,6 +131,7 @@ export function AlgorithmPicker({ onSelect, selected }: AlgorithmPickerProps) {
                 return (
                   <button
                     key={entry.meta.id}
+                    role="menuitem"
                     onClick={() => {
                       onSelect(entry.meta);
                       setIsOpen(false);

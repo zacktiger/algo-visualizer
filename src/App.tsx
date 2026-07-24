@@ -142,7 +142,30 @@ export default function App() {
     modalRef.current?.focus();
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowInputEditor(false);
+      if (e.key === "Escape") {
+        setShowInputEditor(false);
+        return;
+      }
+      // Focus trap: keep Tab cycling within the modal.
+      if (e.key === "Tab" && modalRef.current) {
+        const focusables = modalRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+        if (!modalRef.current.contains(active)) {
+          e.preventDefault();
+          first.focus();
+        } else if (e.shiftKey && active === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => {
